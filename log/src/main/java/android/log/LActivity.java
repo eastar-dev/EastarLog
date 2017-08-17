@@ -10,16 +10,16 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.support.annotation.Nullable;
+import android.view.WindowManager;
 
 public class LActivity extends android.support.v7.app.AppCompatActivity {
-
     PowerManager.WakeLock wakeLock;
 
     private void acquireWakeLock(Context context) {
         PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, context.getClass().getName());
         if (wakeLock != null) {
-            wakeLock.acquire();
+            wakeLock.acquire(5000);
         }
     }
 
@@ -30,16 +30,23 @@ public class LActivity extends android.support.v7.app.AppCompatActivity {
         }
     }
 
+    @Override
+    public void sendBroadcast(Intent intent) {
+        Log.sendBroadcast(getClass(), intent);
+        super.sendBroadcast(intent);
+    }
+
     protected void onCreate(Bundle savedInstanceState) {
+        if (Log.LOG) {
+            acquireWakeLock(this);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
         Log.onCreate(getClass());
         super.onCreate(savedInstanceState);
-        //acquireWakeLock(this);
-        //getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     @Override
     protected void onDestroy() {
-        //releaseWakeLock();
         Log.onDestroy(getClass());
         super.onDestroy();
 

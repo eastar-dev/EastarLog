@@ -1300,6 +1300,18 @@ public class Log {
         return println(priority, info, log);
     }
 
+    public static void sendBroadcast(Class<?> clz, Intent intent) {
+        if (!LOG)
+            return;
+        try {
+            final String target = ((intent.getComponent() != null) ? intent.getComponent().getShortClassName() : intent.toUri(0));
+            Log.pc(Log.ERROR, "sendBroadcast", "▶▶", clz, target, intent);
+        } catch (Exception e) {
+
+        }
+    }
+
+
     public static void onCreate(Class<?> clz) {
         Log.po(Log.ERROR, "onCreate", clz);
     }
