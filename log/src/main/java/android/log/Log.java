@@ -1311,6 +1311,29 @@ public class Log {
         }
     }
 
+    public static void onResume(Class<?> clz) {
+//		Log.po(Log.ERROR, "onResume", clz);
+    }
+
+    public static void onPause(Class<?> clz) {
+//		Log.po(Log.WARN, "onPause", clz);
+    }
+
+    public static void onDetach(Class<?> clz) {
+        Log.po(Log.WARN, "onDetach", clz);
+    }
+
+    public static void onDestroyView(Class<?> clz) {
+        Log.po(Log.WARN, "onDestroyView", clz);
+    }
+
+    public static void onCreate(Class<?> clz, Bundle savedInstanceState) {
+        Log.po(Log.ERROR, "onCreate", clz);
+    }
+
+    public static void onAttach(Class<?> clz, Context context) {
+        Log.po(Log.ERROR, "onAttach", clz);
+    }
 
     public static void onCreate(Class<?> clz) {
         Log.po(Log.ERROR, "onCreate", clz);
@@ -1333,6 +1356,14 @@ public class Log {
     }
 
     public static ArrayList<Class<?>> CLZS = new ArrayList<Class<?>>();
+
+    public static void startActivity(Class<?> clz, Intent intent) {
+        startActivityForResult(clz, intent, -1);
+    }
+
+    public static void onActivityCreated(Class<?> clz, Bundle savedInstanceState) {
+        Log.po(Log.ERROR, "onActivityCreated", clz);
+    }
 
     public static void onActivityResult(Class<?> clz, int requestCode, int resultCode, Intent data) {
         if (!LOG)

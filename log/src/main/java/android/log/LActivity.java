@@ -2,45 +2,28 @@ package android.log;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.app.PendingIntent.CanceledException;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.PowerManager;
 import android.support.annotation.Nullable;
-import android.view.WindowManager;
+import android.support.v4.app.FragmentActivity;
 
-public class LActivity extends android.support.v7.app.AppCompatActivity {
-    PowerManager.WakeLock wakeLock;
-
-    private void acquireWakeLock(Context context) {
-        PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-        wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, context.getClass().getName());
-        if (wakeLock != null) {
-            wakeLock.acquire(5000);
-        }
-    }
-
-    private void releaseWakeLock() {
-        if (wakeLock != null) {
-            wakeLock.release();
-            wakeLock = null;
-        }
-    }
-
+public class LActivity extends FragmentActivity {
     @Override
     public void sendBroadcast(Intent intent) {
         Log.sendBroadcast(getClass(), intent);
+        DialogInterface.OnCancelListener sss = null;
+        Context context = null;
+        new AlertDialog.Builder(context).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss).setOnCancelListener(sss);
         super.sendBroadcast(intent);
     }
 
     protected void onCreate(Bundle savedInstanceState) {
-        if (Log.LOG) {
-            acquireWakeLock(this);
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        }
         Log.onCreate(getClass());
         super.onCreate(savedInstanceState);
     }
@@ -73,7 +56,7 @@ public class LActivity extends android.support.v7.app.AppCompatActivity {
     @SuppressLint("ObsoleteSdkInt")
     @Override
     public void startActivityForResult(Intent intent, int requestCode) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN)
+        if ((requestCode >> 16) == 0 && Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN)
             Log.startActivityForResult(getClass(), intent, requestCode);
         super.startActivityForResult(intent, requestCode);
     }
@@ -82,7 +65,10 @@ public class LActivity extends android.support.v7.app.AppCompatActivity {
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     @Override
     public void startActivityForResult(Intent intent, int requestCode, @Nullable Bundle options) {
-        Log.startActivityForResult(getClass(), intent, requestCode, options);
+        if ((requestCode >> 16) == 0)
+            Log.startActivityForResult(getClass(), intent, requestCode, options);
+        else
+            Log.po(Log.ERROR, "onActivityResult", "▶▶", getClass());
         super.startActivityForResult(intent, requestCode, options);
     }
 
@@ -103,7 +89,10 @@ public class LActivity extends android.support.v7.app.AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.onActivityResult(getClass(), requestCode, resultCode, data);
+        if ((requestCode >> 16) == 0)
+            Log.onActivityResult(getClass(), requestCode, resultCode, data);
+        else
+            Log.po(Log.ERROR, "onActivityResult", "◀◀", getClass());
         super.onActivityResult(requestCode, resultCode, data);
     }
 }
