@@ -82,27 +82,23 @@ public class Log {
     private static final int MAX_LOG_LINE_BYTE_SIZE = 3600;
     private static final String EXCLUDE_CLASS = "^android\\.log\\..+|^android\\.os\\..+|^android\\.util\\..+|^java.lang\\.|.+\\.HLog$|.+\\.Logger$|.+\\.CLog$";
 
-    public static int println(int priority, String msg) {
-        final StackTraceElement info = getStack();
-        final String tag = getTager(info);
-        final String locator = getLocator(info);
-        return println(priority, tag, msg, locator);
-//		flog(LOGFILE, info, msg);
-    }
-
-    public static int println(int priority, StackTraceElement info, String log) {
-        final String tag = getTager(info);
-        final String locator = getLocator(info);
-        return println(priority, tag, log, locator);
-//		flog(LOGFILE, info, msg);
-    }
-
-    public static int println(int priority, String tag, String log, String locator) {
+    public static int println(int priority, Object... args) {
         if (!LOG)
             return -1;
+        final StackTraceElement info = getStack();
+        return println(priority, info, args);
+    }
+
+    private static int println(int priority, StackTraceElement info, Object... args) {
+        if (!LOG)
+            return -1;
+        final String msg = _MESSAGE(args);
+        final String tag = getTager(info);
+        final String locator = getLocator(info);
+
 
         final ArrayList<String> sa = new ArrayList<String>(100);
-        final StringTokenizer st = new StringTokenizer(log, LF, false);
+        final StringTokenizer st = new StringTokenizer(msg, LF, false);
         while (st.hasMoreTokens()) {
             final byte[] byte_text = st.nextToken().getBytes();
             int offset = 0;
@@ -302,31 +298,10 @@ public class Log {
         }
     }
 
-    public static int p(int priority, Object... args) {
-        if (!LOG)
-            return -1;
-        final String log = _MESSAGE(args);
-        return println(priority, log);
-    }
-
-    public static int l() {
-        if (!LOG)
-            return -1;
-
-        return println(android.util.Log.ERROR, "");
-    }
-
-    public static int l(Object... args) {
-        if (!LOG)
-            return -1;
-
-        final String log = _MESSAGE(args);
-        return println(android.util.Log.ERROR, log);
-    }
 
     private static long last_filter;
 
-    public static int l_filter(long sec, Object... args) {
+    public static int e_filter(long sec, Object... args) {
         if (!LOG)
             return -1;
 
@@ -334,76 +309,69 @@ public class Log {
             return -1;
 
         last_filter = System.currentTimeMillis();
-        final String log = _MESSAGE(args);
 
-        return println(android.util.Log.ERROR, log);
+        return println(android.util.Log.ERROR, args);
     }
 
     public static int a(Object... args) {
         if (!LOG)
             return -1;
-        final String log = _MESSAGE(args);
-        return println(android.util.Log.ASSERT, log);
+        return println(android.util.Log.ASSERT, args);
     }
 
     public static int e(Object... args) {
         if (!LOG)
             return -1;
-        final String log = _MESSAGE(args);
-        return println(android.util.Log.ERROR, log);
+        return println(android.util.Log.ERROR, args);
     }
 
     public static int w(Object... args) {
         if (!LOG)
             return -1;
-        final String log = _MESSAGE(args);
-        return println(android.util.Log.WARN, log);
+        return println(android.util.Log.WARN, args);
     }
 
     public static int i(Object... args) {
         if (!LOG)
             return -1;
-        final String log = _MESSAGE(args);
-        return println(android.util.Log.INFO, log);
+        return println(android.util.Log.INFO, args);
     }
 
     public static int d(Object... args) {
         if (!LOG)
             return -1;
-        final String log = _MESSAGE(args);
-        return println(android.util.Log.DEBUG, log);
+        return println(android.util.Log.DEBUG, args);
     }
 
     public static int v(Object... args) {
         if (!LOG)
             return -1;
-        final String log = _MESSAGE(args);
-        return println(android.util.Log.VERBOSE, log);
+        return println(android.util.Log.VERBOSE, args);
     }
 
     public static int json(String json) {
         if (!LOG)
             return -1;
-        return l(_DUMP_json(json));
+        return e(_DUMP_json(json));
     }
 
     public static int object(Object o) {
         if (!LOG)
             return -1;
-        return l(_DUMP_object(o));
+        return e(_DUMP_object(o));
     }
 
     public static int milliseconds(long milliseconds) {
         if (!LOG)
             return -1;
-        return l(_DUMP_milliseconds(milliseconds));
+        return e(_DUMP_milliseconds(milliseconds));
     }
 
     public static int provider(Context context, Uri uri) {
         if (!LOG)
             return -1;
         if (context == null || uri == null) {
-            l("context==null || uri == null");
+            e("context==null || uri == null");
             return -1;
 
         }
@@ -411,7 +379,7 @@ public class Log {
         if (c == null)
             return -1;
 
-        int result = l(c);
+        int result = e(c);
         c.close();
         return result;
     }
@@ -484,7 +452,7 @@ public class Log {
         if (context == null)
             return;
 
-        l(args);
+        e(args);
         Toast.makeText(context, _MESSAGE(args), Toast.LENGTH_SHORT).show();
     }
 
@@ -1053,7 +1021,7 @@ public class Log {
         String seed = new Exception().getStackTrace()[2].getFileName();
         long e = System.currentTimeMillis();
         long s = (SEED_S.get(seed) == null ? 0L : SEED_S.get(seed));
-        l(String.format("%15d%15d%15d", s, e, e - s));
+        e(String.format("%15d%15d%15d", s, e, e - s));
         SEED_S.put(seed, e);
     }
 
@@ -1063,7 +1031,7 @@ public class Log {
         String seed = new Exception().getStackTrace()[2].getFileName();
         long e = System.currentTimeMillis();
         long s = (SEED_S.get(seed) == null ? 0L : SEED_S.get(seed));
-        l(String.format("%15d%15d%15d", s, e, e - s), _INTERNAL_MESSAGE(args));
+        e(String.format("%15d%15d%15d", s, e, e - s), _INTERNAL_MESSAGE(args));
         SEED_S.put(seed, e);
     }
 
@@ -1079,7 +1047,7 @@ public class Log {
             return;
         long e = System.currentTimeMillis();
         long s = (SEED_S.get(seed) == null ? 0L : SEED_S.get(seed));
-        l(String.format("%15d%15d%15d", s, e, e - s), seed, _INTERNAL_MESSAGE(args));
+        e(String.format("%15d%15d%15d", s, e, e - s), seed, _INTERNAL_MESSAGE(args));
         SEED_S.put(seed, e);
     }
 
@@ -1124,7 +1092,7 @@ public class Log {
             sb.append("end").append(",");
             sb.append(_DUMP_milliseconds(now)).append(",");
             sb.append("length : " + (now - start)).append("\n");
-            l(sb.toString());
+            e(sb.toString());
             sb = null;
         }
     }
@@ -1263,7 +1231,7 @@ public class Log {
             final Date now = new Date(System.currentTimeMillis());
             final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.ENGLISH);
             final File f = new File(d, sdf.format(now) + "_" + name + ".jpg");
-            Log.l(f);
+            Log.e(f);
             FileOutputStream fos = new FileOutputStream(f);
             BitmapFactory.decodeByteArray(data, 0, data.length).compress(CompressFormat.JPEG, 100, fos);
             fos.close();
@@ -1279,7 +1247,7 @@ public class Log {
             final Date now = new Date(System.currentTimeMillis());
             final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.ENGLISH);
             final File f = new File(d, sdf.format(now) + "_" + name + ".jpg");
-            Log.l(f);
+            Log.e(f);
             FileOutputStream fos = new FileOutputStream(f);
             bmp.compress(CompressFormat.JPEG, 100, fos);
             fos.close();
@@ -1372,16 +1340,15 @@ public class Log {
         Log.po(level, "onActivityResult", "◀◀", clz, String.format("requestCode=0x%08x", requestCode)//
                 , (resultCode == Activity.RESULT_OK ? "Activity.RESULT_OK" : "") + (resultCode == Activity.RESULT_CANCELED ? "Activity.RESULT_CANCELED" : ""));
         if (data != null && data.getExtras() != null)
-            Log.p(level, data.getExtras());
+            Log.println(level, data.getExtras());
     }
 
     public static int pc(int priority, String methodNameKey, Object... args) {
         if (!LOG)
             return -1;
 
-        final String log = _MESSAGE(args);
         StackTraceElement info = getStackC(methodNameKey);
-        return println(priority, info, log);
+        return println(priority, info, args);
     }
 
     public static void startActivities(Class<?> clz, Intent[] intents) {
@@ -1467,7 +1434,7 @@ public class Log {
                     return;
                 LAST_ACTION_MOVE = millis;
             }
-            Log.l(event);
+            Log.e(event);
         } catch (Exception e) {
         }
     }
@@ -1488,24 +1455,4 @@ public class Log {
 //	}
     //호환 팩
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public static String getStackTraceString(Throwable tr) {
-        return android.util.Log.getStackTraceString(tr);
-    }
-
-    public static int log(Object... obj) {
-        return l(obj);
-
-    }
-
-    public static String methodName() {
-        StackTraceElement stackTrace = new Exception().getStackTrace()[1];
-
-        if (stackTrace.isNativeMethod())
-            return null;
-        if (stackTrace.getClassName().charAt(0) == '<')
-            return null;
-        if (stackTrace.getMethodName().charAt(0) == '<')
-            return null;
-        return stackTrace.getMethodName();
-    }
 }

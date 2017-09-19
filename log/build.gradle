@@ -13,20 +13,6 @@ android {
         versionCode 2
         versionName "1.0"
     }
-
-
-    libraryVariants.all { variant ->
-        variant.outputs.all { output ->
-            outputFileName = "${archivesBaseName}_v" + String.format("%03d", defaultConfig.versionCode) + ".aar"
-        }
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-    }
 }
 
 dependencies {
