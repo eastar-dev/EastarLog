@@ -82,20 +82,20 @@ public class Log {
     private static final int MAX_LOG_LINE_BYTE_SIZE = 3600;
     private static final String EXCLUDE_CLASS = "^android\\.log\\..+|^android\\.os\\..+|^android\\.util\\..+|^java.lang\\.|.+\\.HLog$|.+\\.Logger$|.+\\.CLog$";
 
-    public static int println(int priority, Object... args) {
+    public static int p(int priority, Object... args) {
         if (!LOG)
             return -1;
-        final StackTraceElement info = getStack();
-        return println(priority, info, args);
-    }
 
-    private static int println(int priority, StackTraceElement info, Object... args) {
-        if (!LOG)
-            return -1;
-        final String msg = _MESSAGE(args);
+        final StackTraceElement info = getStack();
         final String tag = getTager(info);
         final String locator = getLocator(info);
+        final String msg = _MESSAGE(args);
+        return println(priority, tag, locator, msg);
+    }
 
+    public static int println(int priority, String tag, String locator, String msg) {
+        if (!LOG)
+            return -1;
 
         final ArrayList<String> sa = new ArrayList<String>(100);
         final StringTokenizer st = new StringTokenizer(msg, LF, false);
@@ -310,43 +310,43 @@ public class Log {
 
         last_filter = System.currentTimeMillis();
 
-        return println(android.util.Log.ERROR, args);
+        return p(android.util.Log.ERROR, args);
     }
 
     public static int a(Object... args) {
         if (!LOG)
             return -1;
-        return println(android.util.Log.ASSERT, args);
+        return p(android.util.Log.ASSERT, args);
     }
 
     public static int e(Object... args) {
         if (!LOG)
             return -1;
-        return println(android.util.Log.ERROR, args);
+        return p(android.util.Log.ERROR, args);
     }
 
     public static int w(Object... args) {
         if (!LOG)
             return -1;
-        return println(android.util.Log.WARN, args);
+        return p(android.util.Log.WARN, args);
     }
 
     public static int i(Object... args) {
         if (!LOG)
             return -1;
-        return println(android.util.Log.INFO, args);
+        return p(android.util.Log.INFO, args);
     }
 
     public static int d(Object... args) {
         if (!LOG)
             return -1;
-        return println(android.util.Log.DEBUG, args);
+        return p(android.util.Log.DEBUG, args);
     }
 
     public static int v(Object... args) {
         if (!LOG)
             return -1;
-        return println(android.util.Log.VERBOSE, args);
+        return p(android.util.Log.VERBOSE, args);
     }
 
     public static int json(String json) {
@@ -388,9 +388,10 @@ public class Log {
         if (!LOG)
             return -1;
         final StackTraceElement info = new Exception().getStackTrace()[1 + depth];
-        final String log = _MESSAGE(args);
-
-        return println(priority, info, log);
+        final String tag = getTager(info);
+        final String locator = getLocator(info);
+        final String msg = _MESSAGE(args);
+        return println(priority, tag, locator, msg);
     }
 
     public static int viewtree(View parent, int... depth) {
@@ -1263,9 +1264,12 @@ public class Log {
     public static int po(int priority, String methodNameKey, Object... args) {
         if (!LOG)
             return -1;
-        final String log = _MESSAGE(args);
-        StackTraceElement info = getStack(methodNameKey);
-        return println(priority, info, log);
+
+        final StackTraceElement info = getStack(methodNameKey);
+        final String tag = getTager(info);
+        final String locator = getLocator(info);
+        final String msg = _MESSAGE(args);
+        return println(priority, tag, locator, msg);
     }
 
     public static void sendBroadcast(Class<?> clz, Intent intent) {
@@ -1340,15 +1344,18 @@ public class Log {
         Log.po(level, "onActivityResult", "◀◀", clz, String.format("requestCode=0x%08x", requestCode)//
                 , (resultCode == Activity.RESULT_OK ? "Activity.RESULT_OK" : "") + (resultCode == Activity.RESULT_CANCELED ? "Activity.RESULT_CANCELED" : ""));
         if (data != null && data.getExtras() != null)
-            Log.println(level, data.getExtras());
+            Log.p(level, data.getExtras());
     }
 
     public static int pc(int priority, String methodNameKey, Object... args) {
         if (!LOG)
             return -1;
 
-        StackTraceElement info = getStackC(methodNameKey);
-        return println(priority, info, args);
+        final StackTraceElement info = getStackC(methodNameKey);
+        final String tag = getTager(info);
+        final String locator = getLocator(info);
+        final String msg = _MESSAGE(args);
+        return println(priority, tag, locator, msg);
     }
 
     public static void startActivities(Class<?> clz, Intent[] intents) {
