@@ -87,7 +87,16 @@ public class Log {
             return -1;
 
         final StackTraceElement info = getStack();
-        final String tag = getTager(info);
+        final String tag = getTag(info);
+        final String locator = getLocator(info);
+        final String msg = _MESSAGE(args);
+        return println(priority, tag, locator, msg);
+    }
+
+    public static int ps(int priority, StackTraceElement info, Object... args) {
+        if (!LOG)
+            return -1;
+        final String tag = getTag(info);
         final String locator = getLocator(info);
         final String msg = _MESSAGE(args);
         return println(priority, tag, locator, msg);
@@ -154,7 +163,7 @@ public class Log {
             return String.format(Locale.getDefault(), "(%s:%d)", info.getFileName(), info.getLineNumber());//android studio
     }
 
-    private static String getTager(StackTraceElement info) {
+    private static String getTag(StackTraceElement info) {
         if (info == null)
             return "";
         String tag = info.getMethodName();
@@ -388,7 +397,7 @@ public class Log {
         if (!LOG)
             return -1;
         final StackTraceElement info = new Exception().getStackTrace()[1 + depth];
-        final String tag = getTager(info);
+        final String tag = getTag(info);
         final String locator = getLocator(info);
         final String msg = _MESSAGE(args);
         return println(priority, tag, locator, msg);
@@ -1266,7 +1275,7 @@ public class Log {
             return -1;
 
         final StackTraceElement info = getStack(methodNameKey);
-        final String tag = getTager(info);
+        final String tag = getTag(info);
         final String locator = getLocator(info);
         final String msg = _MESSAGE(args);
         return println(priority, tag, locator, msg);
@@ -1352,7 +1361,7 @@ public class Log {
             return -1;
 
         final StackTraceElement info = getStackC(methodNameKey);
-        final String tag = getTager(info);
+        final String tag = getTag(info);
         final String locator = getLocator(info);
         final String msg = _MESSAGE(args);
         return println(priority, tag, locator, msg);
