@@ -16,6 +16,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.SystemClock;
+import android.support.annotation.Nullable;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.MeasureSpec;
@@ -54,7 +55,6 @@ import java.util.StringTokenizer;
  * @author r
  */
 public class Log {
-
     public static class 에러아님_Exception extends Throwable {
         private static final long serialVersionUID = -8900034648685639609L;
     }
@@ -66,7 +66,7 @@ public class Log {
     public static final int ERROR = android.util.Log.ERROR;
     public static final int ASSERT = android.util.Log.ASSERT;
 
-    public static boolean LOG = true;
+    public static boolean LOG = false;
 
     public static enum eMODE {
         ECLIPSE, STUDIO
@@ -80,7 +80,7 @@ public class Log {
     private static final String PREFIX_MULTILINE = PREFIX + "▼";
     private static final String LF = "\n";
     private static final int MAX_LOG_LINE_BYTE_SIZE = 3600;
-    private static final String EXCLUDE_CLASS = "^android\\.log\\..+|^android\\.os\\..+|^android\\.util\\..+|^java.lang\\.|.+\\.HLog$|.+\\.Logger$|.+\\.CLog$";
+    private static final String EXCLUDE_CLASS = "^android\\..+|^java\\..+|.+\\..*Log$|.+\\..*Logger$";
 
     public static int p(int priority, Object... args) {
         if (!LOG)
@@ -134,6 +134,7 @@ public class Log {
             return sum;
         } else {
             StringBuilder sb = new StringBuilder(".........................................................................................");
+
             sb.replace(0, tag.length(), tag);
             sb.replace(sb.length() - locator.length(), sb.length(), locator);
             String adj_tag = sb.toString();
@@ -216,36 +217,77 @@ public class Log {
     private static StackTraceElement getStack(String methodNameKey) {
         final StackTraceElement[] stackTraceElements = new Exception().getStackTrace();
         int i = stackTraceElements.length - 1;
-        StackTraceElement stackTraceElement = stackTraceElements[i];
+        StackTraceElement info = stackTraceElements[i];
         for (; i >= 0; i--) {
-            stackTraceElement = stackTraceElements[i];
-            final String methodName = stackTraceElement.getMethodName();
-//			final String className = stackTraceElement.getClassName();
-//			final String fileName = stackTraceElement.getFileName();
-//			final int lineNumber = stackTraceElement.getLineNumber();
-//			android.util.Log.e("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
+            info = stackTraceElements[i];
+            final String methodName = info.getMethodName();
+//            final String className = info.getClassName();
+//            final String fileName = info.getFileName();
+//            final int lineNumber = info.getLineNumber();
+//            android.util.Log.w("DEBUG", className + "," + methodName + "," + fileName + " " + lineNumber);
             if (methodNameKey.equals(methodName))
                 break;
         }
-        return stackTraceElement;
+        return info;
     }
 
     private static StackTraceElement getStackC(String methodNameKey) {
         final StackTraceElement[] stackTraceElements = new Exception().getStackTrace();
-        int i = stackTraceElements.length - 1;
-        StackTraceElement stackTraceElement = stackTraceElements[i];
-        StackTraceElement info = stackTraceElements[i];
-        for (; i >= 0; i--) {
-            stackTraceElement = stackTraceElements[i];
-            final String methodName = stackTraceElement.getMethodName();
-//			final String className = stackTraceElement.getClassName();
-//			final String fileName = stackTraceElement.getFileName();
-//			final int lineNumber = stackTraceElement.getLineNumber();
-//			android.util.Log.e("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-            if (methodNameKey.equals(methodName))
+        int N = stackTraceElements.length;
+
+        StackTraceElement info = stackTraceElements[0];
+        int i = 0;
+        for (; i < N; i++) {
+            info = stackTraceElements[i];
+            final String methodName = info.getMethodName();
+            final String className = info.getClassName();
+            final String fileName = info.getFileName();
+            final int lineNumber = info.getLineNumber();
+//            android.util.Log.w("DEBUG", className + "," + methodName + "," + fileName + " " + lineNumber);
+            if (methodNameKey.equals(methodName)) {
+//                android.util.Log.i("break", className + "," + methodName + "," + fileName + " " + lineNumber);
                 break;
-            info = stackTraceElement;
+            }
         }
+
+        for (; i < N; i++) {
+            info = stackTraceElements[i];
+            final String methodName = info.getMethodName();
+            final String fileName = info.getFileName();
+            final String className = info.getClassName();
+            final int lineNumber = info.getLineNumber();
+            final boolean isNativeMethod = info.isNativeMethod();
+//            android.util.Log.w("DEBUG", className + "," + methodName + "," + isNativeMethod + "," + fileName + " " + lineNumber);
+            if (methodName.contains("access$")) {
+//                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
+                continue;
+            }
+
+            if (fileName == null || fileName.length() <= 0) {
+//                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
+                continue;
+            }
+
+            if (lineNumber <= 0) {
+//                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
+                continue;
+            }
+
+            if (!methodNameKey.equals(methodName)) {
+//                android.util.Log.i("break", className + "," + methodName + "," + fileName + " " + lineNumber);
+                break;
+            }
+        }
+
+//        for (; i < N; i++) {
+//            StackTraceElement rr = stackTraceElements[i];
+//            final String methodName = rr.getMethodName();
+//            final String className = rr.getClassName();
+//            final String fileName = rr.getFileName();
+//            final int lineNumber = rr.getLineNumber();
+//            android.util.Log.w("LOG", className + "," + methodName + "," + fileName + " " + lineNumber);
+//        }
+
         return info;
     }
 
@@ -306,7 +348,6 @@ public class Log {
             e.printStackTrace();
         }
     }
-
 
     private static long last_filter;
 
@@ -496,7 +537,7 @@ public class Log {
 				else if (object instanceof CharSequence)  sb.append(_DUMP(object.toString()));
 				else if (object.getClass().isArray())     sb.append(_DUMP_array(object));
 				else                                      sb.append(object.toString());
-				
+
 				//@formatter:on
                 sb.append(",");
             } catch (Exception e) {
@@ -580,9 +621,8 @@ public class Log {
         return result.toString();
     }
 
-    private static String _DUMP(View v, int... depths) {
+    private static String _DUMP(View v, final int depth) {
         final String SP = "                    ";
-        final int depth = depths.length > 0 ? depths[0] : 0;
         StringBuilder out = new StringBuilder(128);
         out.append(SP);
 
@@ -595,6 +635,10 @@ public class Log {
         out.setLength(SP.length());
         appendViewInfo(out, v);
         return out.toString();
+    }
+
+    private static String _DUMP(View v) {
+        return _DUMP(v, 0);
     }
 
     private static void appendViewInfo(StringBuilder out, View v) {
@@ -722,11 +766,11 @@ public class Log {
         for (String key : keys) {
             final Object o = bundle.get(key);
             if (o == null) {
-                sb.append(key + ",null,null");
+                sb.append("Object" + " " + key + ";//" + null);
             } else if (o.getClass().isArray()) {
-                sb.append(key + "," + o.getClass().getSimpleName() + "," + _DUMP_array(o));
+                sb.append(o.getClass().getSimpleName() + " " + key + ";//" + _DUMP_array(o));
             } else {
-                sb.append(key + "," + o.getClass().getSimpleName() + "," + o.toString());
+                sb.append(o.getClass().getSimpleName() + " " + key + ";//" + o.toString());
             }
             sb.append("\n");
         }
@@ -754,7 +798,7 @@ public class Log {
 			else if (short  .class.equals(elemElemClass)) return Arrays.toString((short  []) o);
 			else if (byte   .class.equals(elemElemClass)) return           _DUMP((byte   []) o);
 			else throw new AssertionError();
-		} else 
+		} else
 			return Arrays.toString((Object[]) o);
 		//@formatter:on
 
@@ -1291,47 +1335,39 @@ public class Log {
 
         }
     }
-
     public static void onResume(Class<?> clz) {
 //		Log.po(Log.ERROR, "onResume", clz);
     }
-
     public static void onPause(Class<?> clz) {
 //		Log.po(Log.WARN, "onPause", clz);
     }
-
     public static void onDetach(Class<?> clz) {
         Log.po(Log.WARN, "onDetach", clz);
     }
-
     public static void onDestroyView(Class<?> clz) {
         Log.po(Log.WARN, "onDestroyView", clz);
     }
-
     public static void onCreate(Class<?> clz, Bundle savedInstanceState) {
         Log.po(Log.ERROR, "onCreate", clz);
     }
-
     public static void onAttach(Class<?> clz, Context context) {
         Log.po(Log.ERROR, "onAttach", clz);
     }
-
     public static void onCreate(Class<?> clz) {
         Log.po(Log.ERROR, "onCreate", clz);
     }
-
+    public static void onNewIntent(Class<?> clz) {
+        Log.po(Log.ERROR, "onCreate", clz);
+    }
     public static void onDestroy(Class<?> clz) {
         Log.po(Log.WARN, "onDestroy", clz);
     }
-
     public static void onStart(Class<?> clz) {
         Log.po(Log.ERROR, "onStart", clz);
     }
-
     public static void onStop(Class<?> clz) {
         Log.po(Log.WARN, "onStop", clz);
     }
-
     public static void onRestart(Class<?> clz) {
         Log.po(Log.INFO, "onRestart", clz);
     }
@@ -1340,6 +1376,10 @@ public class Log {
 
     public static void startActivity(Class<?> clz, Intent intent) {
         startActivityForResult(clz, intent, -1);
+    }
+
+    public static void startActivity(Class<?> clz, Intent intent, @Nullable Bundle options) {
+        startActivityForResult(clz, intent, -1, options);
     }
 
     public static void onActivityCreated(Class<?> clz, Bundle savedInstanceState) {
@@ -1402,7 +1442,6 @@ public class Log {
         } catch (Exception e) {
         }
     }
-
 
     public static void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         if (!LOG)
