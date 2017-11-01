@@ -33,7 +33,7 @@ just replace all 'import android.util.Log;' -> 'import android.log.Log;' that it
 ```javascript
 
 	dependencies {
-	        api 'com.github.djrain:log:1.1.1'
+	        api 'com.github.djrain:log:2.0.2'
 	}
 
 

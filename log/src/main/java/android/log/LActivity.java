@@ -2,11 +2,8 @@ package android.log;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
-import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.app.PendingIntent.CanceledException;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
@@ -23,6 +20,12 @@ public class LActivity extends FragmentActivity {
     protected void onCreate(Bundle savedInstanceState) {
         Log.onCreate(getClass());
         super.onCreate(savedInstanceState);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        Log.onNewIntent(getClass());
+        super.onNewIntent(intent);
     }
 
     @Override
@@ -50,25 +53,6 @@ public class LActivity extends FragmentActivity {
         super.onRestart();
     }
 
-    @SuppressLint("ObsoleteSdkInt")
-    @Override
-    public void startActivityForResult(Intent intent, int requestCode) {
-        if ((requestCode >> 16) == 0 && Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN)
-            Log.startActivityForResult(getClass(), intent, requestCode);
-        super.startActivityForResult(intent, requestCode);
-    }
-
-    @SuppressLint("RestrictedApi")
-    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    @Override
-    public void startActivityForResult(Intent intent, int requestCode, @Nullable Bundle options) {
-        if ((requestCode >> 16) == 0)
-            Log.startActivityForResult(getClass(), intent, requestCode, options);
-        else
-            Log.po(Log.ERROR, "onActivityResult", "▶▶", getClass());
-        super.startActivityForResult(intent, requestCode, options);
-    }
-
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     @Override
     public void startActivities(Intent[] intents) {
@@ -84,12 +68,27 @@ public class LActivity extends FragmentActivity {
             super.startActivities(intents);
     }
 
+    @SuppressLint("ObsoleteSdkInt")
+    @Override
+    public void startActivityForResult(Intent intent, int requestCode) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN)
+            Log.startActivityForResult(getClass(), intent, requestCode);
+        super.startActivityForResult(intent, requestCode);
+    }
+
+    @SuppressLint("RestrictedApi")
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    @Override
+    public void startActivityForResult(Intent intent, int requestCode, @Nullable Bundle options) {
+        Log.startActivityForResult(getClass(), intent, requestCode, options);
+        super.startActivityForResult(intent, requestCode, options);
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if ((requestCode >> 16) == 0)
             Log.onActivityResult(getClass(), requestCode, resultCode, data);
-        else
-            Log.po(Log.ERROR, "onActivityResult", "◀◀", getClass());
+
         super.onActivityResult(requestCode, resultCode, data);
     }
 }

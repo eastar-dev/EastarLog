@@ -15,13 +15,6 @@ android {
     }
 }
 
-repositories {
-    jcenter()
-//        google()
-    maven { url "https://maven.google.com" }
-}
-
-
 dependencies {
-    compile 'com.android.support:appcompat-v7:26.1.0'
+    implementation 'com.android.support:appcompat-v7:26.1.0'
 }
