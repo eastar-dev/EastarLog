@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
@@ -55,6 +56,7 @@ import java.util.StringTokenizer;
  * @author r
  */
 public class Log {
+
     public static class 에러아님_Exception extends Throwable {
         private static final long serialVersionUID = -8900034648685639609L;
     }
@@ -80,7 +82,9 @@ public class Log {
     private static final String PREFIX_MULTILINE = PREFIX + "▼";
     private static final String LF = "\n";
     private static final int MAX_LOG_LINE_BYTE_SIZE = 3600;
-    private static final String EXCLUDE_CLASS = "^android\\..+|^java\\..+|.+\\..*Log$|.+\\..*Logger$";
+    //    private static final String EXCLUDE_CLASS = "^android\\..+|^java\\..+|.+\\..*Log$|.+\\..*Logger$";
+    private static final String LOG_CLASS = "^android\\.log\\..+";
+    private static final String ANDROID_CLASS = "^android\\.app\\..+|^android\\.os\\..+|^com\\.android\\..+|^java\\..+|^android\\.view\\.BWebView\\$BWebViewClient";
 
     public static int p(int priority, Object... args) {
         if (!LOG)
@@ -173,7 +177,7 @@ public class Log {
             tag = name.substring(name.lastIndexOf('.') + 1) + "." + info.getMethodName();
         } catch (Exception e) {
         }
-        return tag;
+        return tag.replaceAll("\\$", "_");
     }
 
     private static StackTraceElement getStack() {
@@ -182,44 +186,106 @@ public class Log {
 
 //		String methodName = null;
         int N = stackTraceElements.length;
-        StackTraceElement stackTraceElement = stackTraceElements[i];
+        StackTraceElement info = stackTraceElements[i];
         for (; i < N; i++) {
-            stackTraceElement = stackTraceElements[i];
-            final String className = stackTraceElement.getClassName();
-//			final String fileName = stackTraceElement.getFileName();
-//			final int lineNumber = stackTraceElement.getLineNumber();
-//			final String methodName = stackTraceElement.getMethodName();
-//			android.util.Log.e("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-
-            if (className.matches(EXCLUDE_CLASS))
+            info = stackTraceElements[i];
+            final String className = info.getClassName();
+//            final String fileName = info.getFileName();
+//            final int lineNumber = info.getLineNumber();
+//            final String methodName = info.getMethodName();
+//            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
+            if (className.matches(LOG_CLASS))
                 continue;
-//			if (EXCLUDE_FILES.contains(stackTraceElement.getFileName()))
-//				continue;
+            break;
+        }
+
+        for (; i < N; i++) {
+            info = stackTraceElements[i];
+            final String className = info.getClassName();
+//            final String fileName = info.getFileName();
+//            final int lineNumber = info.getLineNumber();
+//            final String methodName = info.getMethodName();
+//            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
+            if (className.matches(ANDROID_CLASS))
+                continue;
             break;
         }
 
         for (; i >= 0; i--) {
-            stackTraceElement = stackTraceElements[i];
-//			final String className = stackTraceElement.getClassName();
-//			final String fileName = stackTraceElement.getFileName();
-            final int lineNumber = stackTraceElement.getLineNumber();
-//			final String methodName = stackTraceElement.getMethodName();
+            info = stackTraceElements[i];
+//			final String className = info.getClassName();
+//			final String fileName = info.getFileName();
+            final int lineNumber = info.getLineNumber();
+//			final String methodName = info.getMethodName();
 //			android.util.Log.e("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-
             if (lineNumber < 0)
                 continue;
             break;
         }
 
-        return stackTraceElement;
+        return info;
     }
 
     private static StackTraceElement getStack(String methodNameKey) {
         final StackTraceElement[] stackTraceElements = new Exception().getStackTrace();
-        int i = stackTraceElements.length - 1;
-        StackTraceElement info = stackTraceElements[i];
-        for (; i >= 0; i--) {
-            info = stackTraceElements[i];
+        StackTraceElement info = stackTraceElements[0];
+        int N = stackTraceElements.length;
+        int s = 0;
+        for (; s < N; s++) {
+            info = stackTraceElements[s];
+            final String className = info.getClassName();
+//            final String fileName = info.getFileName();
+//            final int lineNumber = info.getLineNumber();
+//            final String methodName = info.getMethodName();
+//            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
+            if (className.matches(LOG_CLASS)) {
+//                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
+                continue;
+            }
+//            android.util.Log.e("stop", className + "," + methodName + "," + fileName + " " + lineNumber);
+            break;
+        }
+
+        int e = N - 1;
+        for (; e >= s; e--) {
+            info = stackTraceElements[e];
+            final String methodName = info.getMethodName();
+            final String className = info.getClassName();
+//            final String fileName = info.getFileName();
+//            final int lineNumber = info.getLineNumber();
+//            android.util.Log.d("DEBUG", className + "," + methodName + "," + fileName + " " + lineNumber);
+            if (methodNameKey.equals(methodName) && !className.matches(ANDROID_CLASS)) {
+//                android.util.Log.e("stop", className + "," + methodName + "," + fileName + " " + lineNumber);
+                break;
+            }
+//            android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
+        }
+        return info;
+    }
+
+    private static StackTraceElement getStackC(String methodNameKey) {
+        final StackTraceElement[] stackTraceElements = new Exception().getStackTrace();
+
+        StackTraceElement last_info = stackTraceElements[0];
+        int N = stackTraceElements.length;
+        int s = 0;
+        for (; s < N; s++) {
+            final StackTraceElement info = stackTraceElements[s];
+            last_info = info;
+            final String className = info.getClassName();
+//            final String fileName = info.getFileName();
+//            final int lineNumber = info.getLineNumber();
+//            final String methodName = info.getMethodName();
+//            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
+            if (className.matches(LOG_CLASS))
+                continue;
+            break;
+        }
+
+        int e = N - 1;
+
+        for (; e >= s; e--) {
+            final StackTraceElement info = stackTraceElements[e];
             final String methodName = info.getMethodName();
 //            final String className = info.getClassName();
 //            final String fileName = info.getFileName();
@@ -227,69 +293,72 @@ public class Log {
 //            android.util.Log.w("DEBUG", className + "," + methodName + "," + fileName + " " + lineNumber);
             if (methodNameKey.equals(methodName))
                 break;
+            last_info = info;
         }
-        return info;
+        return last_info;
     }
-
-    private static StackTraceElement getStackC(String methodNameKey) {
-        final StackTraceElement[] stackTraceElements = new Exception().getStackTrace();
-        int N = stackTraceElements.length;
-
-        StackTraceElement info = stackTraceElements[0];
-        int i = 0;
-        for (; i < N; i++) {
-            info = stackTraceElements[i];
-            final String methodName = info.getMethodName();
-            final String className = info.getClassName();
-            final String fileName = info.getFileName();
-            final int lineNumber = info.getLineNumber();
-//            android.util.Log.w("DEBUG", className + "," + methodName + "," + fileName + " " + lineNumber);
-            if (methodNameKey.equals(methodName)) {
-//                android.util.Log.i("break", className + "," + methodName + "," + fileName + " " + lineNumber);
-                break;
-            }
-        }
-
-        for (; i < N; i++) {
-            info = stackTraceElements[i];
-            final String methodName = info.getMethodName();
-            final String fileName = info.getFileName();
-            final String className = info.getClassName();
-            final int lineNumber = info.getLineNumber();
-            final boolean isNativeMethod = info.isNativeMethod();
-//            android.util.Log.w("DEBUG", className + "," + methodName + "," + isNativeMethod + "," + fileName + " " + lineNumber);
-            if (methodName.contains("access$")) {
-//                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
-                continue;
-            }
-
-            if (fileName == null || fileName.length() <= 0) {
-//                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
-                continue;
-            }
-
-            if (lineNumber <= 0) {
-//                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
-                continue;
-            }
-
-            if (!methodNameKey.equals(methodName)) {
-//                android.util.Log.i("break", className + "," + methodName + "," + fileName + " " + lineNumber);
-                break;
-            }
-        }
-
+//    private static StackTraceElement getStackC2(String methodNameKey) {
+//        final StackTraceElement[] stackTraceElements = new Exception().getStackTrace();
+//        int N = stackTraceElements.length;
+//
+//        StackTraceElement info = stackTraceElements[0];
+//        int i = 0;
 //        for (; i < N; i++) {
-//            StackTraceElement rr = stackTraceElements[i];
-//            final String methodName = rr.getMethodName();
-//            final String className = rr.getClassName();
-//            final String fileName = rr.getFileName();
-//            final int lineNumber = rr.getLineNumber();
-//            android.util.Log.w("LOG", className + "," + methodName + "," + fileName + " " + lineNumber);
+//            info = stackTraceElements[i];
+//            final String methodName = info.getMethodName();
+//            final String className = info.getClassName();
+//            final String fileName = info.getFileName();
+//            final int lineNumber = info.getLineNumber();
+//            android.util.Log.w("DEBUG", className + "," + methodName + "," + fileName + " " + lineNumber);
+//            if (methodNameKey.equals(methodName)) {
+//                android.util.Log.i("break", className + "," + methodName + "," + fileName + " " + lineNumber);
+//                break;
+//            }
 //        }
-
-        return info;
-    }
+//
+//        for (; i < N; i++) {
+//            info = stackTraceElements[i];
+//            final String methodName = info.getMethodName();
+//            final String fileName = info.getFileName();
+//            final String className = info.getClassName();
+//            final int lineNumber = info.getLineNumber();
+//            final boolean isNativeMethod = info.isNativeMethod();
+//            android.util.Log.d("DEBUG", className + "," + methodName + "," + isNativeMethod + "," + fileName + " " + lineNumber);
+//            if (methodName.contains("access$")) {
+//                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
+//                continue;
+//            }
+//
+//            if (fileName == null || fileName.length() <= 0) {
+//                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
+//                continue;
+//            }
+//
+//            if (lineNumber <= 0) {
+//                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
+//                continue;
+//            }
+//
+//            if (className.contains("android.") && methodNameKey.equals(methodName)) {
+//                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
+//                continue;
+//            }
+//
+//            android.util.Log.w("break", className + "," + methodName + "," + fileName + " " + lineNumber);
+//            break;
+//        }
+//
+////        for (; i < N; i++) {
+////            StackTraceElement rr = stackTraceElements[i];
+////            final String methodName = rr.getMethodName();
+////            final String className = rr.getClassName();
+////            final String fileName = rr.getFileName();
+////            final int lineNumber = rr.getLineNumber();
+////            android.util.Log.w("LOG", className + "," + methodName + "," + fileName + " " + lineNumber);
+////        }
+//
+//        return info;
+//    }
 
     private static int safeCut(byte[] byte_text, int byte_start_index, int byte_length) {
         int text_length = byte_text.length;
@@ -537,7 +606,7 @@ public class Log {
 				else if (object instanceof CharSequence)  sb.append(_DUMP(object.toString()));
 				else if (object.getClass().isArray())     sb.append(_DUMP_array(object));
 				else                                      sb.append(object.toString());
-
+				
 				//@formatter:on
                 sb.append(",");
             } catch (Exception e) {
@@ -798,7 +867,7 @@ public class Log {
 			else if (short  .class.equals(elemElemClass)) return Arrays.toString((short  []) o);
 			else if (byte   .class.equals(elemElemClass)) return           _DUMP((byte   []) o);
 			else throw new AssertionError();
-		} else
+		} else 
 			return Arrays.toString((Object[]) o);
 		//@formatter:on
 
@@ -820,24 +889,24 @@ public class Log {
         sb.append("\r\n Uri                       ").append(uri.toString());
         sb.append("\r\n Scheme                    ").append(uri.getScheme() != null ? uri.getScheme().toString() : "null");
         sb.append("\r\n Host                      ").append(uri.getHost() != null ? uri.getHost().toString() : "null");
-        sb.append("\r\n Port                      ").append(uri.getPort());
+//        sb.append("\r\n Port                      ").append(uri.getPort());
         sb.append("\r\n Path                      ").append(uri.getPath() != null ? uri.getPath().toString() : "null");
         sb.append("\r\n Query                     ").append(uri.getQuery() != null ? uri.getQuery().toString() : "null");
-        sb.append("\r\n");
+//        sb.append("\r\n");
         sb.append("\r\n Fragment                  ").append(uri.getFragment() != null ? uri.getFragment().toString() : "null");
-        sb.append("\r\n LastPathSegment           ").append(uri.getLastPathSegment() != null ? uri.getLastPathSegment().toString() : "null");
-        sb.append("\r\n SchemeSpecificPart        ").append(uri.getSchemeSpecificPart() != null ? uri.getSchemeSpecificPart().toString() : "null");
-        sb.append("\r\n UserInfo                  ").append(uri.getUserInfo() != null ? uri.getUserInfo().toString() : "null");
-        sb.append("\r\n PathSegments              ").append(uri.getPathSegments() != null ? uri.getPathSegments().toString() : "null");
-        sb.append("\r\n Authority                 ").append(uri.getAuthority() != null ? uri.getAuthority().toString() : "null");
-        sb.append("\r\n");
-        sb.append("\r\n EncodedAuthority          ").append(uri.getEncodedAuthority() != null ? uri.getEncodedAuthority().toString() : "null");
-        sb.append("\r\n EncodedPath               ").append(uri.getEncodedPath() != null ? uri.getEncodedPath().toString() : "null");
-        sb.append("\r\n EncodedQuery              ").append(uri.getEncodedQuery() != null ? uri.getEncodedQuery().toString() : "null");
-        sb.append("\r\n EncodedFragment           ").append(uri.getEncodedFragment() != null ? uri.getEncodedFragment().toString() : "null");
-        sb.append("\r\n EncodedSchemeSpecificPart ").append(uri.getEncodedSchemeSpecificPart() != null ? uri.getEncodedSchemeSpecificPart().toString() : "null");
-        sb.append("\r\n EncodedUserInfo           ").append(uri.getEncodedUserInfo() != null ? uri.getEncodedUserInfo().toString() : "null");
-        sb.append("\r\n");
+//        sb.append("\r\n LastPathSegment           ").append(uri.getLastPathSegment() != null ? uri.getLastPathSegment().toString() : "null");
+//        sb.append("\r\n SchemeSpecificPart        ").append(uri.getSchemeSpecificPart() != null ? uri.getSchemeSpecificPart().toString() : "null");
+//        sb.append("\r\n UserInfo                  ").append(uri.getUserInfo() != null ? uri.getUserInfo().toString() : "null");
+//        sb.append("\r\n PathSegments              ").append(uri.getPathSegments() != null ? uri.getPathSegments().toString() : "null");
+//        sb.append("\r\n Authority                 ").append(uri.getAuthority() != null ? uri.getAuthority().toString() : "null");
+//        sb.append("\r\n");
+//        sb.append("\r\n EncodedAuthority          ").append(uri.getEncodedAuthority() != null ? uri.getEncodedAuthority().toString() : "null");
+//        sb.append("\r\n EncodedPath               ").append(uri.getEncodedPath() != null ? uri.getEncodedPath().toString() : "null");
+//        sb.append("\r\n EncodedQuery              ").append(uri.getEncodedQuery() != null ? uri.getEncodedQuery().toString() : "null");
+//        sb.append("\r\n EncodedFragment           ").append(uri.getEncodedFragment() != null ? uri.getEncodedFragment().toString() : "null");
+//        sb.append("\r\n EncodedSchemeSpecificPart ").append(uri.getEncodedSchemeSpecificPart() != null ? uri.getEncodedSchemeSpecificPart().toString() : "null");
+//        sb.append("\r\n EncodedUserInfo           ").append(uri.getEncodedUserInfo() != null ? uri.getEncodedUserInfo().toString() : "null");
+//        sb.append("\r\n");
         return sb.toString();
     }
 
@@ -1492,6 +1561,12 @@ public class Log {
             Log.e(event);
         } catch (Exception e) {
         }
+    }
+
+    public static void showTable(SQLiteDatabase db) {
+        final Cursor c = db.rawQuery("SELECT * FROM sqlite_master WHERE type='table';", null);
+        e(c);
+        c.close();
     }
 
     //	public static void onCreate(Class<? extends android.support.v4.app.Fragment> clz, FragmentActivity activity) {

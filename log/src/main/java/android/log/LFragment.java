@@ -20,6 +20,7 @@ public class LFragment extends android.support.v4.app.Fragment {
         Log.onAttach(getClass(), context);
     }
 
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
