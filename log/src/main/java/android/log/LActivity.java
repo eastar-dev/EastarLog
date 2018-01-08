@@ -8,9 +8,8 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v4.app.FragmentActivity;
 
-public class LActivity extends FragmentActivity {
+public class LActivity extends android.support.v7.app.AppCompatActivity {
     @Override
     public void sendBroadcast(Intent intent) {
         Log.sendBroadcast(getClass(), intent);

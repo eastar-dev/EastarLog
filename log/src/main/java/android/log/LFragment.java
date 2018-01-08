@@ -1,9 +1,7 @@
 package android.log;
 
 import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 
 public class LFragment extends android.support.v4.app.Fragment {
 
@@ -13,13 +11,11 @@ public class LFragment extends android.support.v4.app.Fragment {
         Log.onActivityCreated(getClass(), savedInstanceState);
     }
 
-
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
         Log.onAttach(getClass(), context);
     }
-
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
