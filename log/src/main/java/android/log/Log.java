@@ -17,7 +17,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.SystemClock;
-import android.support.annotation.Nullable;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.MeasureSpec;
@@ -26,6 +25,8 @@ import android.webkit.WebView;
 import android.widget.AdapterView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.eastandroid.smartc.log.BuildConfig;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -55,9 +56,10 @@ import java.util.StringTokenizer;
 /**
  * @author r
  */
+@SuppressWarnings("ALL")
 public class Log {
 
-    public static class 에러아님_Exception extends Throwable {
+    public static class ForLogException extends Throwable {
         private static final long serialVersionUID = -8900034648685639609L;
     }
 
@@ -68,10 +70,10 @@ public class Log {
     public static final int ERROR = android.util.Log.ERROR;
     public static final int ASSERT = android.util.Log.ASSERT;
 
-    public static boolean LOG = false;
+    public static boolean LOG = BuildConfig.DEBUG;
 
-    public static enum eMODE {
-        ECLIPSE, STUDIO
+    public enum eMODE {
+        STUDIO, SYSTEMOUT
     }
 
     public static eMODE MODE = eMODE.STUDIO;
@@ -82,7 +84,7 @@ public class Log {
     private static final String PREFIX_MULTILINE = PREFIX + "▼";
     private static final String LF = "\n";
     private static final int MAX_LOG_LINE_BYTE_SIZE = 3600;
-    public static String LOG_CLASS = "^android\\.log\\..+";
+    private static final String LOG_CLASS = Log.class.getName();
     private static final String ANDROID_CLASS = "^android\\.app\\..+|^android\\.os\\..+|^com\\.android\\..+|^java\\..+|^android\\.view\\.BWebView\\$BWebViewClient";
 
     public static int p(int priority, Object... args) {
@@ -109,7 +111,7 @@ public class Log {
         if (!LOG)
             return -1;
 
-        final ArrayList<String> sa = new ArrayList<String>(100);
+        final ArrayList<String> sa = new ArrayList<>(100);
         final StringTokenizer st = new StringTokenizer(msg, LF, false);
         while (st.hasMoreTokens()) {
             final byte[] byte_text = st.nextToken().getBytes();
@@ -121,22 +123,8 @@ public class Log {
                 offset += count;
             }
         }
-
-        if (MODE == eMODE.ECLIPSE) {
-            int N = sa.size();
-            if (N <= 0)
-                return android.util.Log.println(priority, tag, PREFIX + locator);
-
-            if (N == 1)
-                return android.util.Log.println(priority, tag, sa.get(0) + locator);
-
-            int sum = android.util.Log.println(priority, tag, PREFIX_MULTILINE + locator);
-            for (String s : sa)
-                sum += android.util.Log.println(priority, ":", s);
-
-            return sum;
-        } else {
-            StringBuilder sb = new StringBuilder(".........................................................................................");
+        if (MODE == eMODE.STUDIO) {
+            StringBuilder sb = new StringBuilder(".....................................................................");
 
             sb.replace(0, tag.length(), tag);
             sb.replace(sb.length() - locator.length(), sb.length(), locator);
@@ -155,16 +143,39 @@ public class Log {
 
             return sum;
         }
+        if (MODE == eMODE.SYSTEMOUT) {
+            StringBuilder sb = new StringBuilder(".....................................................................");
+
+            sb.replace(0, tag.length(), tag);
+            sb.replace(sb.length() - locator.length(), sb.length(), locator);
+            String adj_tag = sb.toString();
+
+            int N = sa.size();
+            if (N <= 0) {
+                System.out.println(adj_tag + PREFIX);
+                return 0;
+            }
+
+            if (N == 1) {
+                System.out.println(adj_tag + sa.get(0));
+                return 0;
+            }
+
+            System.out.println(adj_tag + PREFIX_MULTILINE);
+            for (String s : sa)
+                System.out.println(adj_tag + s);
+
+            return 0;
+        }
+
+        return 0;
     }
 
     private static String getLocator(StackTraceElement info) {
         if (info == null)
             return "";
 
-        if (MODE == eMODE.ECLIPSE)
-            return String.format(Locale.getDefault(), ":at (%s:%d)", info.getFileName(), info.getLineNumber());//eclipse
-        else
-            return String.format(Locale.getDefault(), "(%s:%d)", info.getFileName(), info.getLineNumber());//android studio
+        return String.format(Locale.getDefault(), "(%s:%d)", info.getFileName(), info.getLineNumber());//android studio
     }
 
     private static String getTag(StackTraceElement info) {
@@ -174,7 +185,7 @@ public class Log {
         try {
             final String name = info.getClassName();
             tag = name.substring(name.lastIndexOf('.') + 1) + "." + info.getMethodName();
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         return tag.replaceAll("\\$", "_");
     }
@@ -193,7 +204,7 @@ public class Log {
 //            final int lineNumber = info.getLineNumber();
 //            final String methodName = info.getMethodName();
 //            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-            if (className.matches(LOG_CLASS))
+            if (className.startsWith(LOG_CLASS))
                 continue;
             break;
         }
@@ -209,6 +220,8 @@ public class Log {
                 continue;
             break;
         }
+
+        while (i >= N) i--;
 
         for (; i >= 0; i--) {
             info = stackTraceElements[i];
@@ -237,7 +250,7 @@ public class Log {
 //            final int lineNumber = info.getLineNumber();
 //            final String methodName = info.getMethodName();
 //            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-            if (className.matches(LOG_CLASS)) {
+            if (className.startsWith(LOG_CLASS)) {
 //                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
                 continue;
             }
@@ -276,7 +289,7 @@ public class Log {
 //            final int lineNumber = info.getLineNumber();
 //            final String methodName = info.getMethodName();
 //            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-            if (className.matches(LOG_CLASS))
+            if (className.startsWith(LOG_CLASS))
                 continue;
             break;
         }
@@ -419,14 +432,14 @@ public class Log {
 
     private static long last_filter;
 
-    public static int e_filter(long sec, Object... args) {
+    public static int e_filter(long nano, Object... args) {
         if (!LOG)
             return -1;
 
-        if (last_filter < System.currentTimeMillis() - sec)
+        if (last_filter < System.nanoTime() - nano)
             return -1;
 
-        last_filter = System.currentTimeMillis();
+        last_filter = System.nanoTime();
 
         return p(android.util.Log.ERROR, args);
     }
@@ -605,12 +618,14 @@ public class Log {
 				else if (object instanceof CharSequence)  sb.append(_DUMP(object.toString()));
 				else if (object.getClass().isArray())     sb.append(_DUMP_array(object));
 				else                                      sb.append(object.toString());
-				
+
 				//@formatter:on
                 sb.append(",");
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
         }
+        if (sb.length() > 0)
+            sb.setLength(sb.length() - 1);
         return sb.toString();
     }
 
@@ -624,7 +639,7 @@ public class Log {
                     return new JSONArray(json).toString(4);
                 }
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         return json;
     }
@@ -762,7 +777,7 @@ public class Log {
                     out.append(typename);
                     out.append("/");
                     out.append(entryname);
-                } catch (Resources.NotFoundException e) {
+                } catch (Resources.NotFoundException ignored) {
                 }
             }
         }
@@ -780,7 +795,7 @@ public class Log {
             String[] columns = c.getColumnNames();
             sb.append(Arrays.toString(columns));
             sb.append("\n");
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
 
         int countColumns = c.getColumnCount();
@@ -866,7 +881,7 @@ public class Log {
 			else if (short  .class.equals(elemElemClass)) return Arrays.toString((short  []) o);
 			else if (byte   .class.equals(elemElemClass)) return           _DUMP((byte   []) o);
 			else throw new AssertionError();
-		} else 
+		} else
 			return Arrays.toString((Object[]) o);
 		//@formatter:on
 
@@ -886,14 +901,14 @@ public class Log {
 //		return uri.toString();
         StringBuilder sb = new StringBuilder();
         sb.append("\r\n Uri                       ").append(uri.toString());
-        sb.append("\r\n Scheme                    ").append(uri.getScheme() != null ? uri.getScheme().toString() : "null");
-        sb.append("\r\n Host                      ").append(uri.getHost() != null ? uri.getHost().toString() : "null");
+        sb.append("\r\n Scheme                    ").append(uri.getScheme() != null ? uri.getScheme() : "null");
+        sb.append("\r\n Host                      ").append(uri.getHost() != null ? uri.getHost() : "null");
 //        sb.append("\r\n Port                      ").append(uri.getPort());
-        sb.append("\r\n Path                      ").append(uri.getPath() != null ? uri.getPath().toString() : "null");
-        sb.append("\r\n Query                     ").append(uri.getQuery() != null ? uri.getQuery().toString() : "null");
+        sb.append("\r\n Path                      ").append(uri.getPath() != null ? uri.getPath() : "null");
+        sb.append("\r\n LastPathSegment           ").append(uri.getLastPathSegment() != null ? uri.getLastPathSegment() : "null");
+        sb.append("\r\n Query                     ").append(uri.getQuery() != null ? uri.getQuery() : "null");
 //        sb.append("\r\n");
-        sb.append("\r\n Fragment                  ").append(uri.getFragment() != null ? uri.getFragment().toString() : "null");
-//        sb.append("\r\n LastPathSegment           ").append(uri.getLastPathSegment() != null ? uri.getLastPathSegment().toString() : "null");
+        sb.append("\r\n Fragment                  ").append(uri.getFragment() != null ? uri.getFragment() : "null");
 //        sb.append("\r\n SchemeSpecificPart        ").append(uri.getSchemeSpecificPart() != null ? uri.getSchemeSpecificPart().toString() : "null");
 //        sb.append("\r\n UserInfo                  ").append(uri.getUserInfo() != null ? uri.getUserInfo().toString() : "null");
 //        sb.append("\r\n PathSegments              ").append(uri.getPathSegments() != null ? uri.getPathSegments().toString() : "null");
@@ -959,7 +974,7 @@ public class Log {
                 message = cause.getClass().getSimpleName() + "," + cause.getMessage();
                 cause = cause.getCause();
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         return message;
     }
@@ -973,6 +988,12 @@ public class Log {
 
     public static String _DUMP_milliseconds(long milliseconds) {
         return String.format("<%s," + LOGN_FORMAT + ">", sf.format(new Date(milliseconds)), SystemClock.elapsedRealtime());
+    }
+
+    private static final SimpleDateFormat yyyymmddhhmmss = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault());
+
+    public static String _DUMP_yyyymmddhhmmss(long milliseconds) {
+        return yyyymmddhhmmss.format(new Date(milliseconds));
     }
 
     public static String _DUMP_elapsed(long elapsedRealtime) {
@@ -1133,7 +1154,7 @@ public class Log {
         if (!LOG)
             return;
         String seed = new Exception().getStackTrace()[2].getFileName();
-        long e = System.currentTimeMillis();
+        long e = System.nanoTime();
         SEED_S.put(seed, e);
     }
 
@@ -1141,9 +1162,9 @@ public class Log {
         if (!LOG)
             return;
         String seed = new Exception().getStackTrace()[2].getFileName();
-        long e = System.currentTimeMillis();
+        long e = System.nanoTime();
         long s = (SEED_S.get(seed) == null ? 0L : SEED_S.get(seed));
-        e(String.format("%15d%15d%15d", s, e, e - s));
+        e(String.format(Locale.getDefault(), "%,25d", e - s));
         SEED_S.put(seed, e);
     }
 
@@ -1151,25 +1172,26 @@ public class Log {
         if (!LOG)
             return;
         String seed = new Exception().getStackTrace()[2].getFileName();
-        long e = System.currentTimeMillis();
+        long e = System.nanoTime();
         long s = (SEED_S.get(seed) == null ? 0L : SEED_S.get(seed));
-        e(String.format("%15d%15d%15d", s, e, e - s), _INTERNAL_MESSAGE(args));
+        e(String.format(Locale.getDefault(), "%,25d", e - s), _INTERNAL_MESSAGE(args));
         SEED_S.put(seed, e);
     }
 
     public static void tic_s(Object seed) {
         if (!LOG)
             return;
-        long e = System.currentTimeMillis();
+        long e = System.nanoTime();
         SEED_S.put(seed, e);
+        e("--start--" + seed.toString() + "-------------");
     }
 
     public static void tic(Object seed, Object... args) {
         if (!LOG)
             return;
-        long e = System.currentTimeMillis();
+        long e = System.nanoTime();
         long s = (SEED_S.get(seed) == null ? 0L : SEED_S.get(seed));
-        e(String.format("%15d%15d%15d", s, e, e - s), seed, _INTERNAL_MESSAGE(args));
+        e(String.format(Locale.getDefault(), "%,25d", e - s), seed, _INTERNAL_MESSAGE(args));
         SEED_S.put(seed, e);
     }
 
@@ -1189,7 +1211,7 @@ public class Log {
             if (!LOG)
                 return;
 
-            long now = System.currentTimeMillis();
+            long now = System.nanoTime();
 
             if (sb == null) {
                 sb = new StringBuilder();
@@ -1200,7 +1222,7 @@ public class Log {
             }
 
             sb.append(_DUMP_milliseconds(now)).append(",");
-            sb.append(System.currentTimeMillis() - end).append(",");
+            sb.append(System.nanoTime() - end).append(",");
             sb.append(_MESSAGE(args)).append(",");
             sb.append(getLocator(new Exception().getStackTrace()[1])).append("\n");
             end = now;
@@ -1210,7 +1232,7 @@ public class Log {
             if (!LOG)
                 return;
 
-            long now = System.currentTimeMillis();
+            long now = System.nanoTime();
             sb.append("end").append(",");
             sb.append(_DUMP_milliseconds(now)).append(",");
             sb.append("length : " + (now - start)).append("\n");
@@ -1399,43 +1421,66 @@ public class Log {
         try {
             final String target = ((intent.getComponent() != null) ? intent.getComponent().getShortClassName() : intent.toUri(0));
             Log.pc(Log.ERROR, "sendBroadcast", "▶▶", clz, target, intent);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
 
         }
     }
+
+    public static void startService(Class<?> clz, Intent intent) {
+        if (!LOG)
+            return;
+        try {
+            final String target = ((intent.getComponent() != null) ? intent.getComponent().getShortClassName() : intent.toUri(0));
+            Log.pc(Log.ERROR, "sendBroadcast", "▶▶", clz, target, intent);
+        } catch (Exception ignored) {
+
+        }
+    }
+
     public static void onResume(Class<?> clz) {
-//		Log.po(Log.ERROR, "onResume", clz);
+        Log.po(Log.ERROR, "onResume", clz);
     }
+
     public static void onPause(Class<?> clz) {
-//		Log.po(Log.WARN, "onPause", clz);
+        Log.po(Log.WARN, "onPause", clz);
     }
+
     public static void onDetach(Class<?> clz) {
         Log.po(Log.WARN, "onDetach", clz);
     }
+
     public static void onDestroyView(Class<?> clz) {
         Log.po(Log.WARN, "onDestroyView", clz);
     }
+
     public static void onCreate(Class<?> clz, Bundle savedInstanceState) {
         Log.po(Log.ERROR, "onCreate", clz);
     }
+
     public static void onAttach(Class<?> clz, Context context) {
         Log.po(Log.ERROR, "onAttach", clz);
     }
+
     public static void onCreate(Class<?> clz) {
         Log.po(Log.ERROR, "onCreate", clz);
     }
+
     public static void onNewIntent(Class<?> clz) {
-        Log.po(Log.ERROR, "onCreate", clz);
+        Log.po(Log.ERROR, "onNewIntent", clz);
     }
+
     public static void onDestroy(Class<?> clz) {
         Log.po(Log.WARN, "onDestroy", clz);
     }
+
     public static void onStart(Class<?> clz) {
         Log.po(Log.ERROR, "onStart", clz);
     }
+
     public static void onStop(Class<?> clz) {
         Log.po(Log.WARN, "onStop", clz);
     }
+
     public static void onRestart(Class<?> clz) {
         Log.po(Log.INFO, "onRestart", clz);
     }
@@ -1446,7 +1491,7 @@ public class Log {
         startActivityForResult(clz, intent, -1);
     }
 
-    public static void startActivity(Class<?> clz, Intent intent, @Nullable Bundle options) {
+    public static void startActivity(Class<?> clz, Intent intent, Bundle options) {
         startActivityForResult(clz, intent, -1, options);
     }
 
@@ -1484,7 +1529,7 @@ public class Log {
                 final String target = ((intent.getComponent() != null) ? intent.getComponent().getShortClassName() : intent.toUri(0));
                 Log.pc(Log.ERROR, "startActivities", "▶▶", clz, target, intent);
 //		printStackTrace();
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
         }
     }
@@ -1496,7 +1541,7 @@ public class Log {
             final String target = ((intent.getComponent() != null) ? intent.getComponent().getShortClassName() : intent.toUri(0));
             Log.pc(Log.ERROR, (requestCode == -1 ? "startActivity" : "startActivityForResult"), "▶▶", clz, target, intent, String.format("0x%08X", requestCode));
 //		printStackTrace();
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
     }
 
@@ -1507,7 +1552,7 @@ public class Log {
             final String target = ((intent.getComponent() != null) ? intent.getComponent().getShortClassName() : intent.toUri(0));
             Log.pc(Log.ERROR, (requestCode == -1 ? "startActivity" : "startActivityForResult"), "▶▶", clz, target, intent, options, String.format("0x%08X", requestCode));
 //		printStackTrace();
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
     }
 
@@ -1535,7 +1580,7 @@ public class Log {
     public static void printStackTrace() {
         if (!LOG)
             return;
-        new 에러아님_Exception().printStackTrace();
+        new ForLogException().printStackTrace();
     }
 
     public static void printStackTrace(Exception e) {
@@ -1552,13 +1597,13 @@ public class Log {
         try {
             final int action = event.getAction() & MotionEvent.ACTION_MASK;
             if (action == MotionEvent.ACTION_MOVE) {
-                long millis = System.currentTimeMillis();
-                if (millis - LAST_ACTION_MOVE < 1000)
+                long nanoTime = System.nanoTime();
+                if (nanoTime - LAST_ACTION_MOVE < 1000000)
                     return;
-                LAST_ACTION_MOVE = millis;
+                LAST_ACTION_MOVE = nanoTime;
             }
             Log.e(event);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
     }
 
