@@ -70,7 +70,7 @@ public class Log {
     public static final int ERROR = android.util.Log.ERROR;
     public static final int ASSERT = android.util.Log.ASSERT;
 
-    public static boolean LOG = BuildConfig.DEBUG;
+    public static boolean LOG = true;
 
     public enum eMODE {
         STUDIO, SYSTEMOUT
