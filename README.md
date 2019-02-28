@@ -1,3 +1,5 @@
+[![Release](https://jitpack.io/v/djrain/log.svg)](https://jitpack.io/#djrain/log)
+
 ## What different android.log.Log?
 
 android.log.Log is more smart, powerfull then android.util.Log
@@ -12,6 +14,9 @@ just replace all 'import android.util.Log;' -> 'import android.log.Log;' that it
 
 
 
+## What's new?
+removed LActivity , LFragment
+supported android studio 3.3.x
 
 
 ## How...
@@ -33,7 +38,7 @@ just replace all 'import android.util.Log;' -> 'import android.log.Log;' that it
 ```javascript
 
 	dependencies {
-	        api 'com.github.djrain:log:2.0.2'
+	        api 'com.github.djrain:log:3.0.0'
 	}
 
 
