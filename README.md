@@ -7,10 +7,16 @@ Android developers often need to logcat.
 So I made it.
 
 ### log pretty output at JSON, XML another .... ?
-android.log.Log help u'r project tracking find bug.
+android.log.Log help you'r project tracking find bug.
 
-### log quick setting u'r project
+### log quick setting you'r project
 just replace all 'import android.util.Log;' -> 'import android.log.Log;' that it!
+
+### log show or hide?
+```java
+	public static boolean LOG = BuildConfig.DEBUG;
+```
+https://github.com/djrain/log/blob/master/log/src/main/java/android/log/Log.java#L73
 
 
 
@@ -25,23 +31,18 @@ supported android studio 3.3.x
 
 #### Add it in your root build.gradle at the end of repositories:
 ```javascript
-
-	allprojects {
-		repositories {
-			...
-			maven { url 'https://jitpack.io' }
-		}
+allprojects {
+	repositories {
+		...
+		maven { url 'https://jitpack.io' }
 	}
-
+}
 ```
 #### Add the dependency
 ```javascript
-
-	dependencies {
-	        api 'com.github.djrain:log:3.0.0'
-	}
-
-
+dependencies {
+        api 'com.github.djrain:log:3.0.0'
+}
 ```
 
 
