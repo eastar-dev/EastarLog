@@ -26,8 +26,6 @@ import android.widget.AdapterView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.eastandroid.smartc.log.BuildConfig;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -53,15 +51,11 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+@SuppressWarnings("ALL")
 /**
  * @author r
  */
-@SuppressWarnings("ALL")
 public class Log {
-
-    public static class ForLogException extends Throwable {
-        private static final long serialVersionUID = -8900034648685639609L;
-    }
 
     public static final int VERBOSE = android.util.Log.VERBOSE;
     public static final int DEBUG = android.util.Log.DEBUG;
@@ -124,10 +118,11 @@ public class Log {
             }
         }
         if (MODE == eMODE.STUDIO) {
-            StringBuilder sb = new StringBuilder(".....................................................................");
-
-            sb.replace(0, tag.length(), tag);
-            sb.replace(sb.length() - locator.length(), sb.length(), locator);
+            String DOTS = ".....................................................................";
+            StringBuilder sb = new StringBuilder();
+            sb.append(tag).append(DOTS);
+            sb.setLength(DOTS.length() - locator.length());
+            sb.append(locator);
             String adj_tag = sb.toString();
 
             int N = sa.size();
@@ -185,7 +180,7 @@ public class Log {
         try {
             final String name = info.getClassName();
             tag = name.substring(name.lastIndexOf('.') + 1) + "." + info.getMethodName();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
         }
         return tag.replaceAll("\\$", "_");
     }
@@ -562,18 +557,18 @@ public class Log {
         retult += i("getGenericInterfaces", Arrays.toString(clz.getGenericInterfaces()));
         retult += i("getInterfaces", Arrays.toString(clz.getInterfaces()));
         //@formatter:off
-		if (clz.isAnnotation())							retult += i("classinfo", clz.isAnnotation(), "isAnnotation");
-		if (clz.isAnonymousClass())						retult += i(clz.isAnonymousClass(), "isAnonymousClass");
-		if (clz.isArray())								retult += i(clz.isArray(), "isArray");
-		if (clz.isEnum())								retult += i(clz.isEnum(), "isEnum");
-		if (clz.isInstance(CharSequence.class))			retult += i(clz.isInstance(CharSequence.class), "isInstance");
-		if (clz.isAssignableFrom(CharSequence.class))	retult += i(clz.isAssignableFrom(CharSequence.class), "isAssignableFrom");
-		if (clz.isInterface())							retult += i(clz.isInterface(), "isInterface");
-		if (clz.isLocalClass())							retult += i(clz.isLocalClass(), "isLocalClass");
-		if (clz.isMemberClass())						retult += i(clz.isMemberClass(), "isMemberClass");
-		if (clz.isPrimitive())							retult += i(clz.isPrimitive(), "isPrimitive");
-		if (clz.isSynthetic())							retult += i(clz.isSynthetic(), "isSynthetic");
-		//@formatter:on
+        if (clz.isAnnotation())							retult += i("classinfo", clz.isAnnotation(), "isAnnotation");
+        if (clz.isAnonymousClass())						retult += i(clz.isAnonymousClass(), "isAnonymousClass");
+        if (clz.isArray())								retult += i(clz.isArray(), "isArray");
+        if (clz.isEnum())								retult += i(clz.isEnum(), "isEnum");
+        if (clz.isInstance(CharSequence.class))			retult += i(clz.isInstance(CharSequence.class), "isInstance");
+        if (clz.isAssignableFrom(CharSequence.class))	retult += i(clz.isAssignableFrom(CharSequence.class), "isAssignableFrom");
+        if (clz.isInterface())							retult += i(clz.isInterface(), "isInterface");
+        if (clz.isLocalClass())							retult += i(clz.isLocalClass(), "isLocalClass");
+        if (clz.isMemberClass())						retult += i(clz.isMemberClass(), "isMemberClass");
+        if (clz.isPrimitive())							retult += i(clz.isPrimitive(), "isPrimitive");
+        if (clz.isSynthetic())							retult += i(clz.isSynthetic(), "isSynthetic");
+        //@formatter:on
         return retult;
     }
 
@@ -603,23 +598,23 @@ public class Log {
         for (Object object : args) {
             try {
                 //@formatter:off
-				if (object == null)                       sb.append("null");
-				else if (object instanceof Class)         sb.append(_DUMP((Class<?>) object));
-				else if (object instanceof Cursor)        sb.append(_DUMP((Cursor) object));
-				else if (object instanceof View)          sb.append(_DUMP((View) object));
-				else if (object instanceof Intent)        sb.append(_DUMP((Intent) object));
-				else if (object instanceof Bundle)        sb.append(_DUMP((Bundle) object));
-				else if (object instanceof ContentValues) sb.append(_DUMP((ContentValues) object));
-				else if (object instanceof Throwable)     sb.append(_DUMP((Throwable) object));
-				else if (object instanceof Uri)           sb.append(_DUMP((Uri) object));
-				else if (object instanceof Method)        sb.append(_DUMP((Method) object));
-				else if (object instanceof JSONObject)    sb.append(((JSONObject) object).toString(2));
-				else if (object instanceof JSONArray)     sb.append(((JSONArray) object).toString(2));
-				else if (object instanceof CharSequence)  sb.append(_DUMP(object.toString()));
-				else if (object.getClass().isArray())     sb.append(_DUMP_array(object));
-				else                                      sb.append(object.toString());
+                if (object == null)                       sb.append("null");
+                else if (object instanceof Class)         sb.append(_DUMP((Class<?>) object));
+                else if (object instanceof Cursor)        sb.append(_DUMP((Cursor) object));
+                else if (object instanceof View)          sb.append(_DUMP((View) object));
+                else if (object instanceof Intent)        sb.append(_DUMP((Intent) object));
+                else if (object instanceof Bundle)        sb.append(_DUMP((Bundle) object));
+                else if (object instanceof ContentValues) sb.append(_DUMP((ContentValues) object));
+                else if (object instanceof Throwable)     sb.append(_DUMP((Throwable) object));
+//                else if (object instanceof Uri)           sb.append(_DUMP((Uri) object));
+                else if (object instanceof Method)        sb.append(_DUMP((Method) object));
+                else if (object instanceof JSONObject)    sb.append(((JSONObject) object).toString(2));
+                else if (object instanceof JSONArray)     sb.append(((JSONArray) object).toString(2));
+                else if (object instanceof CharSequence)  sb.append(_DUMP(object.toString()));
+                else if (object.getClass().isArray())     sb.append(_DUMP_array(object));
+                else                                      sb.append(object.toString());
 
-				//@formatter:on
+                //@formatter:on
                 sb.append(",");
             } catch (Exception ignored) {
             }
@@ -864,26 +859,26 @@ public class Log {
     private static String _DUMP_array(Object o) {
 
         //@formatter:off
-		if (o == null)
-			return "null";
+        if (o == null)
+            return "null";
 
-		if (!o.getClass().isArray())
-			return "";
+        if (!o.getClass().isArray())
+            return "";
 
-		Class<?> elemElemClass = o.getClass().getComponentType();
-		if (elemElemClass.isPrimitive()) {
-			if      (boolean.class.equals(elemElemClass)) return Arrays.toString((boolean[]) o);
-			else if (char   .class.equals(elemElemClass)) return Arrays.toString((char   []) o);
-			else if (double .class.equals(elemElemClass)) return Arrays.toString((double []) o);
-			else if (float  .class.equals(elemElemClass)) return Arrays.toString((float  []) o);
-			else if (int    .class.equals(elemElemClass)) return Arrays.toString((int    []) o);
-			else if (long   .class.equals(elemElemClass)) return Arrays.toString((long   []) o);
-			else if (short  .class.equals(elemElemClass)) return Arrays.toString((short  []) o);
-			else if (byte   .class.equals(elemElemClass)) return           _DUMP((byte   []) o);
-			else throw new AssertionError();
-		} else
-			return Arrays.toString((Object[]) o);
-		//@formatter:on
+        Class<?> elemElemClass = o.getClass().getComponentType();
+        if (elemElemClass.isPrimitive()) {
+            if      (boolean.class.equals(elemElemClass)) return Arrays.toString((boolean[]) o);
+            else if (char   .class.equals(elemElemClass)) return Arrays.toString((char   []) o);
+            else if (double .class.equals(elemElemClass)) return Arrays.toString((double []) o);
+            else if (float  .class.equals(elemElemClass)) return Arrays.toString((float  []) o);
+            else if (int    .class.equals(elemElemClass)) return Arrays.toString((int    []) o);
+            else if (long   .class.equals(elemElemClass)) return Arrays.toString((long   []) o);
+            else if (short  .class.equals(elemElemClass)) return Arrays.toString((short  []) o);
+            else if (byte   .class.equals(elemElemClass)) return           _DUMP((byte   []) o);
+            else throw new AssertionError();
+        } else
+            return Arrays.toString((Object[]) o);
+        //@formatter:on
 
     }
 
@@ -929,15 +924,15 @@ public class Log {
             return "null_Intent";
         StringBuilder sb = new StringBuilder();
         //@formatter:off
-		sb.append(intent.getAction    () != null ? (sb.length() > 0 ? "\n" : "") + "Action     " + intent.getAction         ().toString() : "");
-		sb.append(intent.getData      () != null ? (sb.length() > 0 ? "\n" : "") + "Data       " + intent.getData           ().toString() : "");
-		sb.append(intent.getCategories() != null ? (sb.length() > 0 ? "\n" : "") + "Categories " + intent.getCategories     ().toString() : "");
-		sb.append(intent.getType      () != null ? (sb.length() > 0 ? "\n" : "") + "Type       " + intent.getType           ().toString() : "");
-		sb.append(intent.getScheme    () != null ? (sb.length() > 0 ? "\n" : "") + "Scheme     " + intent.getScheme         ().toString() : "");
-		sb.append(intent.getPackage   () != null ? (sb.length() > 0 ? "\n" : "") + "Package    " + intent.getPackage        ().toString() : "");
-		sb.append(intent.getComponent () != null ? (sb.length() > 0 ? "\n" : "") + "Component  " + intent.getComponent      ().toString() : "");
-		sb.append(intent.getFlags()      != 0x00 ? (sb.length() > 0 ? "\n" : "") + "Flags      " + Integer.toHexString(intent.getFlags()) : "");
-		//@formatter:on
+        sb.append(intent.getAction    () != null ? (sb.length() > 0 ? "\n" : "") + "Action     " + intent.getAction         ().toString() : "");
+        sb.append(intent.getData      () != null ? (sb.length() > 0 ? "\n" : "") + "Data       " + intent.getData           ().toString() : "");
+        sb.append(intent.getCategories() != null ? (sb.length() > 0 ? "\n" : "") + "Categories " + intent.getCategories     ().toString() : "");
+        sb.append(intent.getType      () != null ? (sb.length() > 0 ? "\n" : "") + "Type       " + intent.getType           ().toString() : "");
+        sb.append(intent.getScheme    () != null ? (sb.length() > 0 ? "\n" : "") + "Scheme     " + intent.getScheme         ().toString() : "");
+        sb.append(intent.getPackage   () != null ? (sb.length() > 0 ? "\n" : "") + "Package    " + intent.getPackage        ().toString() : "");
+        sb.append(intent.getComponent () != null ? (sb.length() > 0 ? "\n" : "") + "Component  " + intent.getComponent      ().toString() : "");
+        sb.append(intent.getFlags()      != 0x00 ? (sb.length() > 0 ? "\n" : "") + "Flags      " + Integer.toHexString(intent.getFlags()) : "");
+        //@formatter:on
 
         if (intent.getExtras() != null)
             sb.append((sb.length() > 0 ? "\n" : "") + _DUMP(intent.getExtras()));
@@ -1031,17 +1026,17 @@ public class Log {
             if (value.getClass().isArray()) {
                 sb.append(name).append('<').append(value.getClass().getSimpleName()).append('>').append(" = ");
                 //@formatter:off
-				Class<?> componentType = value.getClass().getComponentType();
-				if      (boolean.class.isAssignableFrom(componentType)) sb.append(Arrays.toString((boolean[]) value));
-				else if (byte   .class.isAssignableFrom(componentType)) sb.append(((byte[])value).length < MAX_LOG_LINE_BYTE_SIZE ?  new String((byte[])value) : "["+((byte[])value).length  +"]"       );
-				else if (char   .class.isAssignableFrom(componentType)) sb.append(new String((char[])value)         );
-				else if (double .class.isAssignableFrom(componentType)) sb.append(Arrays.toString((double []) value));
-				else if (float  .class.isAssignableFrom(componentType)) sb.append(Arrays.toString((float  []) value));
-				else if (int    .class.isAssignableFrom(componentType)) sb.append(Arrays.toString((int    []) value));
-				else if (long   .class.isAssignableFrom(componentType)) sb.append(Arrays.toString((long   []) value));
-				else if (short  .class.isAssignableFrom(componentType)) sb.append(Arrays.toString((short  []) value));
-				else                                                    sb.append(Arrays.toString((Object []) value));
-				//@formatter:on
+                Class<?> componentType = value.getClass().getComponentType();
+                if      (boolean.class.isAssignableFrom(componentType)) sb.append(Arrays.toString((boolean[]) value));
+                else if (byte   .class.isAssignableFrom(componentType)) sb.append(((byte[])value).length < MAX_LOG_LINE_BYTE_SIZE ?  new String((byte[])value) : "["+((byte[])value).length  +"]"       );
+                else if (char   .class.isAssignableFrom(componentType)) sb.append(new String((char[])value)         );
+                else if (double .class.isAssignableFrom(componentType)) sb.append(Arrays.toString((double []) value));
+                else if (float  .class.isAssignableFrom(componentType)) sb.append(Arrays.toString((float  []) value));
+                else if (int    .class.isAssignableFrom(componentType)) sb.append(Arrays.toString((int    []) value));
+                else if (long   .class.isAssignableFrom(componentType)) sb.append(Arrays.toString((long   []) value));
+                else if (short  .class.isAssignableFrom(componentType)) sb.append(Arrays.toString((short  []) value));
+                else                                                    sb.append(Arrays.toString((Object []) value));
+                //@formatter:on
             } else if (value.getClass().isPrimitive()//
 //					|| (value.getClass().getMethod("toString").getDeclaringClass() != Object.class)// toString이 정의된경우만
                     || value.getClass().isEnum()//
@@ -1438,11 +1433,11 @@ public class Log {
     }
 
     public static void onResume(Class<?> clz) {
-        Log.po(Log.ERROR, "onResume", clz);
+//		Log.po(Log.ERROR, "onResume", clz);
     }
 
     public static void onPause(Class<?> clz) {
-        Log.po(Log.WARN, "onPause", clz);
+//		Log.po(Log.WARN, "onPause", clz);
     }
 
     public static void onDetach(Class<?> clz) {
@@ -1577,10 +1572,13 @@ public class Log {
 
     //tools
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    static class TraceLog extends Throwable {
+        private static final long serialVersionUID = -8900034648685639609L;
+    }
     public static void printStackTrace() {
         if (!LOG)
             return;
-        new ForLogException().printStackTrace();
+        new TraceLog().printStackTrace();
     }
 
     public static void printStackTrace(Exception e) {
