@@ -118,10 +118,11 @@ public class Log {
             }
         }
         if (MODE == eMODE.STUDIO) {
-            String DOTS = ".....................................................................";
+            String DOTS = "....................................................................................";
+            int max_tag = DOTS.length() - locator.length();
             StringBuilder sb = new StringBuilder();
-            sb.append(tag).append(DOTS);
-            sb.setLength(DOTS.length() - locator.length());
+            sb.append(tag, Math.max(tag.length() - max_tag, 0), tag.length()).append(DOTS);
+            sb.setLength(max_tag);
             sb.append(locator);
             String adj_tag = sb.toString();
 
