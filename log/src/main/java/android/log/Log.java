@@ -119,11 +119,10 @@ public class Log {
         }
         if (MODE == eMODE.STUDIO) {
             String DOTS = "....................................................................................";
-            int max_tag = DOTS.length() - locator.length();
-            StringBuilder sb = new StringBuilder();
-            sb.append(tag, Math.max(tag.length() - max_tag, 0), tag.length()).append(DOTS);
-            sb.setLength(max_tag);
-            sb.append(locator);
+            StringBuilder sb = new StringBuilder(DOTS);
+            String last_tag = tag.substring(Math.max(tag.length() + locator.length() - DOTS.length(), 0));
+            sb.replace(0, last_tag.length(), last_tag);
+            sb.replace(sb.length() - locator.length(), sb.length(), locator);
             String adj_tag = sb.toString();
 
             int N = sa.size();
@@ -140,9 +139,10 @@ public class Log {
             return sum;
         }
         if (MODE == eMODE.SYSTEMOUT) {
-            StringBuilder sb = new StringBuilder(".....................................................................");
-
-            sb.replace(0, tag.length(), tag);
+            String DOTS = "....................................................................................";
+            StringBuilder sb = new StringBuilder(DOTS);
+            String last_tag = tag.substring(Math.max(tag.length() + locator.length() - DOTS.length(), 0));
+            sb.replace(0, last_tag.length(), last_tag);
             sb.replace(sb.length() - locator.length(), sb.length(), locator);
             String adj_tag = sb.toString();
 
