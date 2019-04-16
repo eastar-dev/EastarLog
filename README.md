@@ -41,7 +41,7 @@ allprojects {
 #### Add the dependency
 ```javascript
 dependencies {
-        implementation 'com.github.djrain:log:3.0.3'
+        implementation 'com.github.djrain:log:3.0.4'
 }
 ```
 
