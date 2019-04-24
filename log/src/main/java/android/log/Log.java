@@ -26,8 +26,6 @@ import android.widget.AdapterView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.eastandroid.smartc.log.BuildConfig;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -107,6 +105,7 @@ public class Log {
         return println(priority, tag, locator, msg);
     }
 
+    static final int DOT_SIZE = 69;
     public static int println(int priority, String tag, String locator, String msg) {
         if (!LOG)
             return -1;
@@ -124,10 +123,10 @@ public class Log {
             }
         }
         if (MODE == eMODE.STUDIO) {
-            StringBuilder sb = new StringBuilder(".....................................................................");
-
-            sb.replace(0, tag.length(), tag);
-            sb.replace(sb.length() - locator.length(), sb.length(), locator);
+            StringBuilder sb = new StringBuilder(".....................................................................");//69
+            sb.replace(0, Math.min(tag.length(), DOT_SIZE), tag.substring(Math.max(0, tag.length() - DOT_SIZE)));
+            sb.replace(DOT_SIZE - locator.length(), DOT_SIZE, locator);
+            sb.setLength(69);
             String adj_tag = sb.toString();
 
             int N = sa.size();
