@@ -1,6 +1,6 @@
-[![Release](https://jitpack.io/v/djrain/log.svg)](https://jitpack.io/#djrain/log)
+[![Release](https://jitpack.io/v/djrain/EastarLog.svg)](https://jitpack.io/#djrain/EastarLog)
 
-## What different android.log.Log?
+## What different EastarLog?
 
 android.log.Log is more smart, powerfull then android.util.Log
 Android developers often need to logcat.
@@ -41,7 +41,7 @@ allprojects {
 #### Add the dependency
 ```javascript
 dependencies {
-        implementation 'com.github.djrain:log:3.0.4'
+        implementation 'com.github.djrain:EastarLog:3.0.5'
 }
 ```
 
