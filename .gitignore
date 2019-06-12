@@ -9,3 +9,4 @@ build/
 *.aab
 *.apk
 /functions/node_modules/
+local.properties
