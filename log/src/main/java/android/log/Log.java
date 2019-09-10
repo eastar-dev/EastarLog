@@ -1398,8 +1398,15 @@ public class Log {
             return;
         if (FILE_LOG == null)
             return;
+        final StackTraceElement info = getStack();
+        flog(info, args);
+    }
+    public static void flog(final StackTraceElement info, Object... args) {
+        if (!FLOG)
+            return;
+        if (FILE_LOG == null)
+            return;
         try {
-            final StackTraceElement info = getStack();
             final String log = _MESSAGE(args);
             BufferedWriter buf = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(FILE_LOG, true), "UTF-8"));
 
