@@ -90,6 +90,7 @@ public class Log {
     public static eMODE MODE = eMODE.STUDIO;
     public static boolean FLOG = false;
     public static final String LOG_ROOTPATH = "_flog";
+    private static File FILE_LOG;
 
     private static final String PREFIX = "``";
     private static final String PREFIX_MULTILINE = PREFIX + "▼";
@@ -409,38 +410,6 @@ public class Log {
             throw new UnsupportedOperationException("!!byte_length too small");
 
         return po - byte_start_index;
-    }
-
-    private static void flog(File logfile, StackTraceElement info, String log) {
-        if (!FLOG)
-            return;
-
-        try {
-            File parentfile = logfile.getParentFile();
-            if (!parentfile.isDirectory() && !parentfile.exists())
-                parentfile.mkdirs();
-            if (!logfile.exists())
-                logfile.createNewFile();
-
-            BufferedWriter buf = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(logfile, true), "UTF-8"));
-
-            final String tag = String.format("%-80s %-100s ``", _DUMP_milliseconds(), info.toString());
-            final String tagspace = String.format("%80s %100s ``", " ", " ");
-
-            final StringTokenizer st = new StringTokenizer(log, LF, false);
-            if (st.hasMoreTokens()) {
-                final String token = st.nextToken();
-                buf.append(tag).append(token).append(LF);
-            }
-
-            while (st.hasMoreTokens()) {
-                final String token = st.nextToken();
-                buf.append(tagspace).append(token).append(LF);
-            }
-            buf.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private static long last_filter;
@@ -1254,24 +1223,6 @@ public class Log {
         }
     }
 
-    //flog
-    public static void flog(Context context, Object... args) {
-        //		final StackTraceElement info = getStack();
-        //		final String msg = _MESSAGE(args);
-        flog(context.getPackageName(), args);
-    }
-
-    public static void flog(String file_prefix, Object... args) {
-        final StackTraceElement info = getStack();
-        final String msg = _MESSAGE(args);
-
-        final File dirPath = new File(Environment.getExternalStorageDirectory(), LOG_ROOTPATH);
-        final String yyyymmdd = new SimpleDateFormat("yyyyMMdd", Locale.US).format(new Date());
-        final File logfile = new File(dirPath, file_prefix + "_" + yyyymmdd + ".log");
-
-        flog(logfile, info, msg);
-    }
-
     //xml
     private static class PrettyXml {
         private static XmlFormatter formatter = new XmlFormatter(2, 80);
@@ -1409,6 +1360,64 @@ public class Log {
             bmp.compress(CompressFormat.JPEG, 100, fos);
             fos.close();
         } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void setLogFile(Context context) {
+        setLogFile(context, "");
+    }
+    public static void setLogFile(Context context, String tail_fix) {
+        try {
+            if (tail_fix != null && tail_fix.length() >= 0)
+                tail_fix = "_" + tail_fix;
+
+            final File dirPath = new File(Environment.getExternalStorageDirectory(), LOG_ROOTPATH);
+            final String yyyymmdd = new SimpleDateFormat("_yyyyMMdd", Locale.US).format(new Date());
+            final File logfile = new File(dirPath, context.getPackageName() + yyyymmdd + tail_fix + ".log");
+            setLogFile(logfile);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    public static void setLogFile(File logfile) {
+        try {
+            File parentfile = logfile.getParentFile();
+            if (!parentfile.isDirectory() && !parentfile.exists())
+                parentfile.mkdirs();
+            if (!logfile.exists())
+                logfile.createNewFile();
+            FILE_LOG = logfile;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    //flog
+    public static void flog(Object... args) {
+        if (!FLOG)
+            return;
+        if (FILE_LOG == null)
+            return;
+        try {
+            final StackTraceElement info = getStack();
+            final String log = _MESSAGE(args);
+            BufferedWriter buf = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(FILE_LOG, true), "UTF-8"));
+
+            final String tag = String.format("%-80s %-100s ``", _DUMP_milliseconds(), info.toString());
+            final String tagspace = String.format("%80s %100s ``", " ", " ");
+
+            final StringTokenizer st = new StringTokenizer(log, LF, false);
+            if (st.hasMoreTokens()) {
+                final String token = st.nextToken();
+                buf.append(tag).append(token).append(LF);
+            }
+
+            while (st.hasMoreTokens()) {
+                final String token = st.nextToken();
+                buf.append(tagspace).append(token).append(LF);
+            }
+            buf.close();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
