@@ -22,7 +22,7 @@ https://github.com/djrain/log/blob/master/log/src/main/java/android/log/Log.java
 
 ## What's new?
 removed LActivity , LFragment
-supported android studio 3.3.x
+supported android studio 3.3.x ~ 3.6.x
 
 
 ## How...
@@ -41,7 +41,7 @@ allprojects {
 #### Add the dependency
 ```javascript
 dependencies {
-        implementation 'com.github.djrain:EastarLog:3.0.5'
+        implementation 'com.github.djrain:EastarLog:3.1.0'
 }
 ```
 
