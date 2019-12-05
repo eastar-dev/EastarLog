@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("unused")
+
 package android.log
 
-import android.app.Activity
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.res.Resources.NotFoundException
-import android.database.Cursor
 import android.graphics.*
 import android.graphics.Bitmap.CompressFormat
 import android.net.Uri
@@ -41,6 +40,7 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 import kotlin.experimental.and
@@ -53,224 +53,51 @@ object Log {
     const val WARN = android.util.Log.WARN
     const val ERROR = android.util.Log.ERROR
     const val ASSERT = android.util.Log.ASSERT
-    var LOG = true
+    var LOG = false
     var FILE_LOG: File? = null
     var MODE = eMODE.STUDIO
+
+    enum class eMODE { STUDIO, SYSTEMOUT }
+
     private const val PREFIX = "``"
     private const val PREFIX_MULTILINE = "$PREFIX▼"
     private const val LF = "\n"
     private const val MAX_LOG_LINE_BYTE_SIZE = 3600
-    private val LOG_CLASS = Log::class.java.name
+
     private var LOG_PASS_REGEX = "^android\\..+|^com\\.android\\..+|^java\\..+".toRegex()
-    fun p(priority: Int, vararg args: Any?): Int {
-        if (!LOG) return -1
-        val info = getStack()
-        val tag = getTag(info)
-        val locator = getLocator(info)
-        val msg = _MESSAGE(*args)
-        return println(priority, tag, locator, msg)
-    }
 
-    fun ps(priority: Int, info: StackTraceElement?, vararg args: Any): Int {
-        if (!LOG) return -1
-        val tag = getTag(info)
-        val locator = getLocator(info)
-        val msg = _MESSAGE(*args)
-        return println(priority, tag, locator, msg)
-    }
+    private fun getLocator(info: StackTraceElement): String = "(%s:%d)".format(info.fileName, info.lineNumber)
 
-    fun println(priority: Int, tag: String, locator: String, msg: String?): Int {
-        if (!LOG) return -1
-        val sa = ArrayList<String>(100)
-        val st = StringTokenizer(msg, LF, false)
-        while (st.hasMoreTokens()) {
-            val byte_text = st.nextToken().toByteArray()
-            var offset = 0
-            val N = byte_text.size
-            while (offset < N) {
-                val count = safeCut(byte_text, offset)
-                sa.add(PREFIX + String(byte_text, offset, count))
-                offset += count
-            }
-        }
-        if (MODE == eMODE.STUDIO) {
-            val DOTS = "...................................................................................."
-            val sb = StringBuilder(DOTS)
-            val last_tag = tag.substring(Math.max(tag.length + locator.length - DOTS.length, 0))
-            sb.replace(0, last_tag.length, last_tag)
-            sb.replace(sb.length - locator.length, sb.length, locator)
-            val adj_tag = sb.toString()
-            val N = sa.size
-            if (N <= 0) return android.util.Log.println(priority, adj_tag, PREFIX)
-            if (N == 1) return android.util.Log.println(priority, adj_tag, sa[0])
-            var sum = android.util.Log.println(priority, adj_tag, PREFIX_MULTILINE)
-            for (s in sa) sum += android.util.Log.println(priority, adj_tag, s)
-            return sum
-        }
-        if (MODE == eMODE.SYSTEMOUT) {
-            val DOTS = "...................................................................................."
-            val sb = StringBuilder(DOTS)
-            val last_tag = tag.substring(Math.max(tag.length + locator.length - DOTS.length, 0))
-            sb.replace(0, last_tag.length, last_tag)
-            sb.replace(sb.length - locator.length, sb.length, locator)
-            val adj_tag = sb.toString()
-            val N = sa.size
-            if (N <= 0) {
-                println(adj_tag + PREFIX)
-                return 0
-            }
-            if (N == 1) {
-                println(adj_tag + sa[0])
-                return 0
-            }
-            println(adj_tag + PREFIX_MULTILINE)
-            for (s in sa) println(adj_tag + s)
-            return 0
-        }
-        return 0
-    }
+    private fun getTag(info: StackTraceElement): String = runCatching {
+        (info.className.takeLastWhile { it != '.' } + "." + info.methodName).run { replace("\\$".toRegex(), "_") }
+    }.getOrDefault(info.methodName)
 
-    private fun getLocator(info: StackTraceElement?): String {
-        return if (info == null) "" else String.format(Locale.getDefault(), "(%s:%d)", info.fileName, info.lineNumber)
-        //android studio
-    }
-
-    private fun getTag(info: StackTraceElement?): String {
-        if (info == null) return ""
-        var tag = info.methodName
-        try {
-            val name = info.className
-            tag = name.substring(name.lastIndexOf('.') + 1) + "." + info.methodName
-        } catch (e: Exception) {
-        }
-        return tag.replace("\\$".toRegex(), "_")
-    }//			final String className = info.getClassName();
-//			final String fileName = info.getFileName();
-    //			final String methodName = info.getMethodName();
-//			android.util.Log.e("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-//            final String fileName = info.getFileName();
-//            final int lineNumber = info.getLineNumber();
-//            final String methodName = info.getMethodName();
-//            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-//            final String fileName = info.getFileName();
-//            final int lineNumber = info.getLineNumber();
-//            final String methodName = info.getMethodName();
-//            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-
-    //		String methodName = null;
     private fun getStack(): StackTraceElement {
-        val stackTraceElements = Exception().stackTrace
-        var i = 0
-        //		String methodName = null;
-        val N = stackTraceElements.size
-        var info = stackTraceElements[i]
-        while (i < N) {
-            info = stackTraceElements[i]
-            val className = info.className
-            //            final String fileName = info.getFileName();
-//            final int lineNumber = info.getLineNumber();
-//            final String methodName = info.getMethodName();
-//            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-            if (className.startsWith(LOG_CLASS)) {
-                i++
-                continue
-            }
-            break
-            i++
-        }
-        while (i < N) {
-            info = stackTraceElements[i]
-            val className = info.className
-            //            final String fileName = info.getFileName();
-//            final int lineNumber = info.getLineNumber();
-//            final String methodName = info.getMethodName();
-//            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-            if (className.matches(LOG_PASS_REGEX)) {
-                i++
-                continue
-            }
-            break
-            i++
-        }
-        while (i >= N) i--
-        while (i >= 0) {
-            info = stackTraceElements[i]
-            //			final String className = info.getClassName();
-//			final String fileName = info.getFileName();
-            val lineNumber = info.lineNumber
-            //			final String methodName = info.getMethodName();
-//			android.util.Log.e("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-            if (lineNumber < 0) {
-                i--
-                continue
-            }
-            break
-            i--
-        }
-        return info
+        return Exception().stackTrace.filterNot {
+            it.className == javaClass.name
+            //}.filterNot {
+            //    it.className.matches(LOG_PASS_REGEX)
+        }.filterNot {
+            it.lineNumber < 0
+        }.first()
     }
 
-    private fun getStack(methodNameKey: String): StackTraceElement {
-        val stackTraceElements = Exception().stackTrace
-        var info = stackTraceElements[0]
-        val N = stackTraceElements.size
-        var s = 0
-        while (s < N) {
-            info = stackTraceElements[s]
-            val className = info.className
-            //            final String fileName = info.getFileName();
-//            final int lineNumber = info.getLineNumber();
-//            final String methodName = info.getMethodName();
-//            android.util.Log.d("DEBUG", className + "," + fileName + "," + methodName + "," + lineNumber);
-            if (className.startsWith(LOG_CLASS)) { //                android.util.Log.i("pass", className + "," + methodName + "," + fileName + " " + lineNumber);
-                s++
-                continue
-            }
-            //            android.util.Log.e("stop", className + "," + methodName + "," + fileName + " " + lineNumber);
-            break
-            s++
+    private fun getStackMethod(methodNameKey: String): StackTraceElement {
+        return Exception().stackTrace.filterNot {
+            it.className == javaClass.name
+        }.run {
+            lastOrNull {
+                it.methodName == methodNameKey
+            } ?: last()
         }
-        var e = N - 1
-        while (e >= s) {
-            info = stackTraceElements[e]
-            val methodName = info.methodName
-            val className = info.className
-            //            final String fileName = info.getFileName();
-//            final int lineNumber = info.getLineNumber();
-//            android.util.Log.d("DEBUG", className + "," + methodName + "," + fileName + " " + lineNumber);
-            if (methodNameKey == methodName && !className.matches(LOG_PASS_REGEX)) { //                android.util.Log.e("stop", className + "," + methodName + "," + fileName + " " + lineNumber);
-                break
-            }
-            e--
-        }
-        return info
     }
 
-    private fun getStackC(methodNameKey: String): StackTraceElement {
-        val stackTraceElements = Exception().stackTrace
-        var last_info = stackTraceElements[0]
-        val N = stackTraceElements.size
-        var s = 0
-        while (s < N) {
-            val info = stackTraceElements[s]
-            last_info = info
-            val className = info.className
-            if (className.startsWith(LOG_CLASS)) {
-                s++
-                continue
-            }
-            break
-            s++
+    private fun getStackCaller(methodNameKey: String): StackTraceElement {
+        return Exception().stackTrace.filterNot {
+            it.className == javaClass.name
+        }.run {
+            getOrNull(indexOfLast { it.methodName == methodNameKey } + 1) ?: last()
         }
-        var e = N - 1
-        while (e >= s) {
-            val info = stackTraceElements[e]
-            val methodName = info.methodName
-            if (methodNameKey == methodName) break
-            last_info = info
-            e--
-        }
-        return last_info
     }
 
     private fun safeCut(byteArray: ByteArray, startOffset: Int): Int {
@@ -289,46 +116,121 @@ object Log {
         return position - startOffset
     }
 
-    private var last_filter: Long = 0
-    fun e_filter(nano: Long, vararg args: Any?): Int {
-        if (!LOG) return -1
-        if (last_filter < System.nanoTime() - nano) return -1
-        last_filter = System.nanoTime()
-        return p(android.util.Log.ERROR, *args)
+    @JvmStatic
+    fun p(priority: Int, vararg args: Any?) {
+        if (!LOG) return
+        val info = getStack()
+        val tag = getTag(info)
+        val locator = getLocator(info)
+        val msg = _MESSAGE(*args)
+        println(priority, tag, locator, msg)
     }
 
+    @JvmStatic
+    fun ps(priority: Int, info: StackTraceElement, vararg args: Any?) {
+        if (!LOG) return
+        val tag = getTag(info)
+        val locator = getLocator(info)
+        val msg = _MESSAGE(*args)
+        return println(priority, tag, locator, msg)
+    }
+
+    @JvmStatic
+    fun println(priority: Int, tag: String, locator: String, msg: String?) {
+        if (!LOG) return
+        val sa = ArrayList<String>(100)
+        val st = StringTokenizer(msg, LF, false)
+        while (st.hasMoreTokens()) {
+            val byte_text = st.nextToken().toByteArray()
+            var offset = 0
+            val N = byte_text.size
+            while (offset < N) {
+                val count = safeCut(byte_text, offset)
+                sa.add(PREFIX + String(byte_text, offset, count))
+                offset += count
+            }
+        }
+        if (MODE == eMODE.STUDIO) {
+            val dots = "...................................................................................."
+            val sb = StringBuilder(dots)
+            dots.intern()
+            val lastTag = tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
+            sb.replace(0, lastTag.length, lastTag)
+            sb.replace(sb.length - locator.length, sb.length, locator)
+            val adjTag = sb.toString()
+            when (sa.size) {
+                0 -> android.util.Log.println(priority, adjTag, PREFIX)
+                1 -> android.util.Log.println(priority, adjTag, sa[0])
+                else -> android.util.Log.println(priority, adjTag, PREFIX_MULTILINE).run { sa.forEach { android.util.Log.println(priority, adjTag, it) } }
+            }
+        }
+        if (MODE == eMODE.SYSTEMOUT) {
+            val dots = "...................................................................................."
+            val sb = StringBuilder(dots)
+            val lastTag = tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
+            sb.replace(0, lastTag.length, lastTag)
+            sb.replace(sb.length - locator.length, sb.length, locator)
+            val adjTag = sb.toString()
+            when (sa.size) {
+                0 -> println(adjTag + PREFIX)
+                1 -> println(adjTag + sa[0])
+                else -> println(adjTag + PREFIX_MULTILINE).run { repeat(sa.size) { println(adjTag + it) } }
+            }
+
+        }
+    }
+
+    @JvmStatic
     fun a(vararg args: Any?) {
         if (!LOG) return
         p(ASSERT, *args)
     }
 
+    @JvmStatic
     fun e(vararg args: Any?) {
         if (!LOG) return
         p(ERROR, *args)
     }
 
+    @JvmStatic
     fun w(vararg args: Any?) {
         if (!LOG) return
         p(WARN, *args)
     }
 
+    @JvmStatic
     fun i(vararg args: Any?) {
         if (!LOG) return
         p(INFO, *args)
     }
 
+    @JvmStatic
     fun d(vararg args: Any?) {
         if (!LOG) return
         p(DEBUG, *args)
     }
 
+    @JvmStatic
     fun v(vararg args: Any?) {
         if (!LOG) return
         p(VERBOSE, *args)
     }
 
-    fun pn(priority: Int, depth: Int, vararg args: Any?): Int {
-        if (!LOG) return -1
+    @JvmStatic
+    fun printStackTrace() {
+        if (!LOG) return
+        TraceLog().printStackTrace()
+    }
+
+    @JvmStatic
+    fun printStackTrace(e: Exception) {
+        if (!LOG) return
+        e.printStackTrace()
+    }
+
+    @JvmStatic
+    fun pn(priority: Int, depth: Int, vararg args: Any?) {
+        if (!LOG) return
         val info = Exception().stackTrace[1 + depth]
         val tag = getTag(info)
         val locator = getLocator(info)
@@ -336,21 +238,55 @@ object Log {
         return println(priority, tag, locator, msg)
     }
 
-    fun viewtree(parent: View, vararg depth: Int): Int {
-        if (!LOG) return -1
-        val d = if (depth.size > 0) depth[0] else 0
+    @JvmStatic
+    fun pc(priority: Int, method: String, vararg args: Any?) {
+        if (!LOG) return
+        val info = getStackCaller(method)
+        val tag = getTag(info)
+        val locator = getLocator(info)
+        val msg = _MESSAGE(*args)
+        return println(priority, tag, locator, msg)
+    }
+
+    @JvmStatic
+    fun pm(priority: Int, method: String, vararg args: Any?) {
+        if (!LOG) return
+        val info = getStackMethod(method)
+        val tag = getTag(info)
+        val locator = getLocator(info)
+        val msg = _MESSAGE(*args)
+        return println(priority, tag, locator, msg)
+    }
+
+    @JvmStatic
+    fun toast(context: Context, vararg args: Any?) {
+        if (!LOG) return
+        e(*args)
+        Toast.makeText(context, _MESSAGE(*args), Toast.LENGTH_SHORT).show()
+    }
+
+    private var timeout: Long = 0
+    fun debounce(vararg args: Any?) {
+        if (!LOG) return
+        if (timeout < System.nanoTime() - TimeUnit.SECONDS.toNanos(1))
+            return
+        timeout = System.nanoTime()
+        p(ERROR, *args)
+    }
+
+    fun viewtree(parent: View, vararg depth: Int) {
+        if (!LOG) return
+        val d = if (depth.isNotEmpty()) depth[0] else 0
         if (parent !is ViewGroup) {
             return pn(android.util.Log.ERROR, d + 2, _DUMP(parent, 0))
         }
         val vp = parent
         val N = vp.childCount
-        var result = 0
         for (i in 0 until N) {
             val child = vp.getChildAt(i)
-            result += pn(android.util.Log.ERROR, d + 2, _DUMP(child, d))
-            if (child is ViewGroup) result += viewtree(child, d + 1)
+            pn(android.util.Log.ERROR, d + 2, _DUMP(child, d))
+            if (child is ViewGroup) viewtree(child, d + 1)
         }
-        return result
     }
 
     fun clz(clz: Class<*>) {
@@ -381,17 +317,7 @@ object Log {
          //@formatter:on
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    fun toast(context: Context?, vararg args: Any?) {
-        if (!LOG) return
-        if (context == null) return
-        e(*args)
-        Toast.makeText(context, _MESSAGE(*args), Toast.LENGTH_SHORT).show()
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-//_DUMP
-////////////////////////////////////////////////////////////////////////////
+    /** dump */
     fun _MESSAGE(vararg args: Any?): String {
         if (args.isNullOrEmpty())
             return "null[]"
@@ -404,7 +330,6 @@ object Log {
                     it is View -> _DUMP(it)
                     it is Intent -> _DUMP(it)
                     it is Bundle -> _DUMP(it)
-                    it is ContentValues -> _DUMP(it)
                     it is Throwable -> _DUMP(it)
                     it is Method -> _DUMP(it)
                     it is JSONObject -> it.toString(2)
@@ -417,46 +342,16 @@ object Log {
         }
     }
 
-    fun _DUMP_json(json: String): String {
-        try {
-            if (json.length > 0) {
-                if (json[0] == '{') {
-                    return JSONObject(json).toString(4)
-                }
-                if (json[0] == '[') {
-                    return JSONArray(json).toString(4)
-                }
-            }
-        } catch (ignored: Exception) {
+    fun _DUMP(text: String): String = runCatching {
+        val s = text[0]
+        val e = text[text.length - 1]
+        when {
+            s == '[' && e == ']' -> JSONArray(text).toString(2)
+            s == '{' && e == '}' -> JSONObject(text).toString(2)
+            s == '<' && e == '>' -> PrettyXml.format(text)
+            else -> text
         }
-        return json
-    }
-
-    fun _DUMP(`object`: String): String {
-        val sb = StringBuilder()
-        try {
-            val s = `object`[0]
-            val e = `object`[`object`.length - 1]
-            if (s == '[' && e == ']') {
-                val ja = JSONArray(`object`).toString(2)
-                sb.append("\nJA\n")
-                sb.append(ja)
-            } else if (s == '{' && e == '}') {
-                val jo = JSONObject(`object`).toString(2)
-                sb.append("\nJO\n")
-                sb.append(jo)
-            } else if (s == '<' && e == '>') {
-                val xml = PrettyXml.format(`object`)
-                sb.append("\nXML\n")
-                sb.append(xml)
-            } else {
-                sb.append(`object`)
-            }
-        } catch (e: Exception) {
-            sb.append(`object`)
-        }
-        return sb.toString()
-    }
+    }.getOrDefault(text)
 
     fun _DUMP(method: Method): String {
         val result = StringBuilder(Modifier.toString(method.modifiers))
@@ -529,54 +424,6 @@ object Log {
         }
     }
 
-    private fun _DUMP(c: Cursor?): String {
-        if (c == null) return "null_Cursor"
-        val sb = StringBuilder()
-        val count = c.count
-        sb.append("<$count>")
-        try {
-            val columns = c.columnNames
-            sb.append(Arrays.toString(columns))
-            sb.append("\n")
-        } catch (ignored: Exception) {
-        }
-        val countColumns = c.columnCount
-        if (!c.isBeforeFirst) {
-            for (i in 0 until countColumns) {
-                try {
-                    sb.append(c.getString(i) + ",")
-                } catch (e: Exception) {
-                    sb.append("BLOB,")
-                }
-            }
-        } else {
-            val org_pos = c.position
-            while (c.moveToNext()) {
-                for (i in 0 until countColumns) {
-                    try {
-                        sb.append(c.getString(i) + ",")
-                    } catch (e: Exception) {
-                        sb.append("BLOB,")
-                    }
-                }
-                sb.append("\n")
-            }
-            c.moveToPosition(org_pos)
-        }
-        return sb.toString()
-    }
-
-    private fun _DUMP(values: ContentValues?): String {
-        if (values == null) return "null_ContentValues"
-        val sb = StringBuilder()
-        for ((key, value1) in values.valueSet()) {
-            val value = value1.toString()
-            val type = value1.javaClass.simpleName
-            sb.append("$key,$type,$value").append("\n")
-        }
-        return sb.toString()
-    }
-
     private fun _DUMP(bundle: Bundle?): String {
         if (bundle == null) return "null_Bundle"
         val sb = StringBuilder()
@@ -594,7 +441,6 @@ object Log {
 
     private fun _DUMP(cls: Class<*>?): String {
         return cls?.simpleName ?: "null_Class<?>"
-        //		return cls.getSimpleName() + ((cls.getSuperclass() != null) ? (">>" + cls.getSuperclass().getSimpleName()) : "");
     }
 
     private fun _DUMP(uri: Uri?): String {
@@ -604,24 +450,10 @@ object Log {
         sb.append("\r\n Uri                       ").append(uri.toString())
         sb.append("\r\n Scheme                    ").append(if (uri.scheme != null) uri.scheme else "null")
         sb.append("\r\n Host                      ").append(if (uri.host != null) uri.host else "null")
-        //        sb.append("\r\n Port                      ").append(uri.getPort());
         sb.append("\r\n Path                      ").append(if (uri.path != null) uri.path else "null")
         sb.append("\r\n LastPathSegment           ").append(if (uri.lastPathSegment != null) uri.lastPathSegment else "null")
         sb.append("\r\n Query                     ").append(if (uri.query != null) uri.query else "null")
-        //        sb.append("\r\n");
         sb.append("\r\n Fragment                  ").append(if (uri.fragment != null) uri.fragment else "null")
-//        sb.append("\r\n SchemeSpecificPart        ").append(uri.getSchemeSpecificPart() != null ? uri.getSchemeSpecificPart().toString() : "null");
-//        sb.append("\r\n UserInfo                  ").append(uri.getUserInfo() != null ? uri.getUserInfo().toString() : "null");
-//        sb.append("\r\n PathSegments              ").append(uri.getPathSegments() != null ? uri.getPathSegments().toString() : "null");
-//        sb.append("\r\n Authority                 ").append(uri.getAuthority() != null ? uri.getAuthority().toString() : "null");
-//        sb.append("\r\n");
-//        sb.append("\r\n EncodedAuthority          ").append(uri.getEncodedAuthority() != null ? uri.getEncodedAuthority().toString() : "null");
-//        sb.append("\r\n EncodedPath               ").append(uri.getEncodedPath() != null ? uri.getEncodedPath().toString() : "null");
-//        sb.append("\r\n EncodedQuery              ").append(uri.getEncodedQuery() != null ? uri.getEncodedQuery().toString() : "null");
-//        sb.append("\r\n EncodedFragment           ").append(uri.getEncodedFragment() != null ? uri.getEncodedFragment().toString() : "null");
-//        sb.append("\r\n EncodedSchemeSpecificPart ").append(uri.getEncodedSchemeSpecificPart() != null ? uri.getEncodedSchemeSpecificPart().toString() : "null");
-//        sb.append("\r\n EncodedUserInfo           ").append(uri.getEncodedUserInfo() != null ? uri.getEncodedUserInfo().toString() : "null");
-//        sb.append("\r\n");
         return sb.toString()
     }
 
@@ -642,30 +474,22 @@ object Log {
         return sb.toString()
     }
 
-    private fun _DUMP(bytearray: ByteArray?): String = bytearray?.joinToString("") { "%02x".format(it) } ?: "!!byte[]"
-
     fun _DUMP_StackTrace(tr: Throwable?): String {
         return android.util.Log.getStackTraceString(tr)
     }
 
     fun _DUMP(th: Throwable?): String {
-        var message = "Throwable"
-        try {
-            var cause = th
-            while (cause != null) {
-                message = cause.javaClass.simpleName + "," + cause.message
-                cause = cause.cause
-            }
-        } catch (ignored: Exception) {
-        }
-        return message
+        th ?: return "Throwable"
+        return if (th.cause == null)
+            th.javaClass.simpleName + "," + th.message
+        else
+            _DUMP(th.cause)
     }
 
     private val sf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS", Locale.getDefault())
-    private val LOGN_FORMAT = "%" + java.lang.Long.toString(java.lang.Long.MAX_VALUE).length + "d"
     @JvmOverloads
     fun _DUMP_milliseconds(milliseconds: Long = System.currentTimeMillis()): String {
-        return String.format("<%s,$LOGN_FORMAT>", sf.format(Date(milliseconds)), SystemClock.elapsedRealtime())
+        return "<%s,%20d>".format(sf.format(Date(milliseconds)), SystemClock.elapsedRealtime())
     }
 
     private val yyyymmddhhmmss = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
@@ -677,21 +501,12 @@ object Log {
         return _DUMP_milliseconds(System.currentTimeMillis() - (SystemClock.elapsedRealtime() - elapsedRealtime))
     }
 
-    fun _h2s(bytes: ByteArray?): String {
-        return _DUMP(bytes)
-    }
-
-    fun _s2h(bytes_text: String): ByteArray {
-        val bytes = ByteArray(bytes_text.length / 2)
-        try {
-            for (i in bytes.indices) {
-                bytes[i] = bytes_text.substring(2 * i, 2 * i + 2).toInt(16).toByte()
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return bytes
-    }
+    private fun _DUMP(byteArray: ByteArray?): String = _toHexString(byteArray)
+    fun _toHexString(byteArray: ByteArray?): String = byteArray?.joinToString("") { "%02x".format(it) } ?: "!!byte[]"
+    fun _toByteArray(hexString: String): ByteArray = hexString.zipWithNext { a, b -> "$a$b" }
+            .filterIndexed { index, _ -> index % 2 == 0 }
+            .map { it.toInt(16).toByte() }
+            .toByteArray()
 
     fun _DUMP_object(o: Any?): String {
         return _DUMP_object("", o, HashSet())
@@ -834,93 +649,10 @@ object Log {
         }
     }
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //life tools
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //상속트리마지막 위치
-    fun po(priority: Int, methodNameKey: String, vararg args: Any?): Int {
-        if (!LOG) return -1
-        val info = getStack(methodNameKey)
-        val tag = getTag(info)
-        val locator = getLocator(info)
-        val msg = _MESSAGE(*args)
-        return println(priority, tag, locator, msg)
-    }
-
-    fun sendBroadcast(clz: Class<*>?, intent: Intent) {
-        if (!LOG) return
-        try {
-            val target = if (intent.component != null) intent.component!!.shortClassName else intent.toUri(0)
-            pc(ERROR, "sendBroadcast", "▶▶", clz, target, intent)
-        } catch (ignored: Exception) {
-        }
-    }
-
-    fun startService(clz: Class<*>?, intent: Intent) {
-        if (!LOG) return
-        try {
-            val target = if (intent.component != null) intent.component!!.shortClassName else intent.toUri(0)
-            pc(ERROR, "sendBroadcast", "▶▶", clz, target, intent)
-        } catch (ignored: Exception) {
-        }
-    }
-
-    fun onActivityResult(clz: Class<*>?, requestCode: Int, resultCode: Int, data: Intent?) {
-        if (!LOG) return
-
-        val level = if (resultCode == Activity.RESULT_OK) INFO else ERROR
-        po(level, "onActivityResult", "◀◀",
-                clz,
-                "requestCode=0x%08x".format(requestCode),
-                when (resultCode) {
-                    Activity.RESULT_OK -> "Activity.RESULT_OK"
-                    Activity.RESULT_CANCELED -> "Activity.RESULT_CANCELED"
-                    else -> ""
-                })
-        if (data != null && data.extras != null)
-            p(level, data.extras)
-    }
-
-    fun pc(priority: Int, methodNameKey: String, vararg args: Any?): Int {
-        if (!LOG) return -1
-        val info = getStackC(methodNameKey)
-        val tag = getTag(info)
-        val locator = getLocator(info)
-        val msg = _MESSAGE(*args)
-        return println(priority, tag, locator, msg)
-    }
-
-    fun startActivities(clz: Class<*>?, intents: Array<Intent>) {
-        if (!LOG) return
-        for (intent in intents) {
-            try {
-                val target = if (intent.component != null) intent.component!!.shortClassName else intent.toUri(0)
-                pc(ERROR, "startActivities", "▶▶", clz, target, intent)
-                //		printStackTrace();
-            } catch (ignored: Exception) {
-            }
-        }
-    }
-
-    fun startActivityForResult(clz: Class<*>?, intent: Intent, requestCode: Int) {
-        if (!LOG) return
-        try {
-            val target = if (intent.component != null) intent.component!!.shortClassName else intent.toUri(0)
-            pc(ERROR, if (requestCode == -1) "startActivity" else "startActivityForResult", "▶▶", clz, target, intent, String.format("0x%08X", requestCode))
-            //		printStackTrace();
-        } catch (ignored: Exception) {
-        }
-    }
-
-    fun startActivityForResult(clz: Class<*>?, intent: Intent, requestCode: Int, options: Bundle?) {
-        if (!LOG) return
-        try {
-            val target = if (intent.component != null) intent.component!!.shortClassName else intent.toUri(0)
-            pc(ERROR, if (requestCode == -1) "startActivity" else "startActivityForResult", "▶▶", clz, target, intent, options, String.format("0x%08X", requestCode))
-            //		printStackTrace();
-        } catch (ignored: Exception) {
-        }
-    }
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//life tools
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//상속트리마지막 위치
 
     fun measure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         if (!LOG) return
@@ -932,20 +664,10 @@ object Log {
         d(String.format("%10d,%10d", widthSize, heightSize))
     }
 
-    fun printStackTrace() {
-        if (!LOG) return
-        TraceLog().printStackTrace()
-    }
-
-    fun printStackTrace(e: Exception) {
-        if (!LOG) return
-        e.printStackTrace()
-    }
-
     private var LAST_ACTION_MOVE: Long = 0
     fun onTouchEvent(event: MotionEvent) {
         if (!LOG) return
-        try {
+        runCatching {
             val action = event.action and MotionEvent.ACTION_MASK
             if (action == MotionEvent.ACTION_MOVE) {
                 val nanoTime = System.nanoTime()
@@ -953,15 +675,11 @@ object Log {
                 LAST_ACTION_MOVE = nanoTime
             }
             e(event)
-        } catch (ignored: Exception) {
         }
     }
 
     //호환 팩
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    enum class eMODE {
-        STUDIO, SYSTEMOUT
-    }
 
     //xml
     private object PrettyXml {
