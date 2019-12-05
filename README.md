@@ -41,7 +41,7 @@ allprojects {
 #### Add the dependency
 ```javascript
 dependencies {
-        implementation 'com.github.djrain:EastarLog:3.1.0'
+        implementation 'com.github.djrain:EastarLog:4.0.0'
 }
 ```
 

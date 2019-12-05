@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("unused")
+
+@file:Suppress("FunctionName", "unused", "MemberVisibilityCanBePrivate")
 
 package android.log
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.Resources.NotFoundException
 import android.graphics.*
 import android.graphics.Bitmap.CompressFormat
 import android.net.Uri
@@ -37,7 +37,6 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.reflect.Method
-import java.lang.reflect.Modifier
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -55,9 +54,9 @@ object Log {
     const val ASSERT = android.util.Log.ASSERT
     var LOG = false
     var FILE_LOG: File? = null
-    var MODE = eMODE.STUDIO
+    var OUTPUT_CHANNEL = Channel.STUDIO
 
-    enum class eMODE { STUDIO, SYSTEMOUT }
+    enum class Channel { STUDIO, SYSTEM }
 
     private const val PREFIX = "``"
     private const val PREFIX_MULTILINE = "$PREFIX▼"
@@ -75,8 +74,6 @@ object Log {
     private fun getStack(): StackTraceElement {
         return Exception().stackTrace.filterNot {
             it.className == javaClass.name
-            //}.filterNot {
-            //    it.className.matches(LOG_PASS_REGEX)
         }.filterNot {
             it.lineNumber < 0
         }.first()
@@ -141,16 +138,15 @@ object Log {
         val sa = ArrayList<String>(100)
         val st = StringTokenizer(msg, LF, false)
         while (st.hasMoreTokens()) {
-            val byte_text = st.nextToken().toByteArray()
+            val byteText = st.nextToken().toByteArray()
             var offset = 0
-            val N = byte_text.size
-            while (offset < N) {
-                val count = safeCut(byte_text, offset)
-                sa.add(PREFIX + String(byte_text, offset, count))
+            while (offset < byteText.size) {
+                val count = safeCut(byteText, offset)
+                sa.add(PREFIX + String(byteText, offset, count))
                 offset += count
             }
         }
-        if (MODE == eMODE.STUDIO) {
+        if (OUTPUT_CHANNEL == Channel.STUDIO) {
             val dots = "...................................................................................."
             val sb = StringBuilder(dots)
             dots.intern()
@@ -164,7 +160,7 @@ object Log {
                 else -> android.util.Log.println(priority, adjTag, PREFIX_MULTILINE).run { sa.forEach { android.util.Log.println(priority, adjTag, it) } }
             }
         }
-        if (MODE == eMODE.SYSTEMOUT) {
+        if (OUTPUT_CHANNEL == Channel.SYSTEM) {
             val dots = "...................................................................................."
             val sb = StringBuilder(dots)
             val lastTag = tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
@@ -176,7 +172,6 @@ object Log {
                 1 -> println(adjTag + sa[0])
                 else -> println(adjTag + PREFIX_MULTILINE).run { repeat(sa.size) { println(adjTag + it) } }
             }
-
         }
     }
 
@@ -235,7 +230,7 @@ object Log {
         val tag = getTag(info)
         val locator = getLocator(info)
         val msg = _MESSAGE(*args)
-        return println(priority, tag, locator, msg)
+        println(priority, tag, locator, msg)
     }
 
     @JvmStatic
@@ -245,7 +240,7 @@ object Log {
         val tag = getTag(info)
         val locator = getLocator(info)
         val msg = _MESSAGE(*args)
-        return println(priority, tag, locator, msg)
+        println(priority, tag, locator, msg)
     }
 
     @JvmStatic
@@ -255,7 +250,7 @@ object Log {
         val tag = getTag(info)
         val locator = getLocator(info)
         val msg = _MESSAGE(*args)
-        return println(priority, tag, locator, msg)
+        println(priority, tag, locator, msg)
     }
 
     @JvmStatic
@@ -266,6 +261,7 @@ object Log {
     }
 
     private var timeout: Long = 0
+    @JvmStatic
     fun debounce(vararg args: Any?) {
         if (!LOG) return
         if (timeout < System.nanoTime() - TimeUnit.SECONDS.toNanos(1))
@@ -274,51 +270,49 @@ object Log {
         p(ERROR, *args)
     }
 
-    fun viewtree(parent: View, vararg depth: Int) {
+    @JvmStatic
+    fun viewTree(parent: View, depth: Int = 0) {
         if (!LOG) return
-        val d = if (depth.isNotEmpty()) depth[0] else 0
-        if (parent !is ViewGroup) {
-            return pn(android.util.Log.ERROR, d + 2, _DUMP(parent, 0))
-        }
-        val vp = parent
-        val N = vp.childCount
-        for (i in 0 until N) {
-            val child = vp.getChildAt(i)
-            pn(android.util.Log.ERROR, d + 2, _DUMP(child, d))
-            if (child is ViewGroup) viewtree(child, d + 1)
+        if (parent !is ViewGroup)
+            return pn(android.util.Log.ERROR, depth + 2, _DUMP(parent, 0))
+
+        for (i in 0 until parent.childCount) {
+            val child = parent.getChildAt(i)
+            pn(android.util.Log.ERROR, depth + 2, _DUMP(child, depth))
+            if (child is ViewGroup)
+                viewTree(child, depth + 1)
         }
     }
 
+    @JvmStatic
     fun clz(clz: Class<*>) {
         if (!LOG) return
         e(clz)
-        i("getName", clz.name)
-        i("getPackage", clz.`package`)
-        i("getCanonicalName", clz.canonicalName)
-        i("getDeclaredClasses", clz.declaredClasses.contentToString())
-        i("getClasses", clz.classes.contentToString())
-        i("getSigners", clz.signers?.contentToString())
-        i("getEnumConstants", clz.enumConstants?.contentToString())
-        i("getTypeParameters", clz.typeParameters.contentToString())
-        i("getGenericInterfaces", clz.genericInterfaces.contentToString())
-        i("getInterfaces", clz.interfaces.contentToString())
         //@formatter:off
-        if (clz.isAnnotation                              ) i("classinfo", clz.isAnnotation, "isAnnotation")
-        if (clz.isAnonymousClass                          ) i(clz.isAnonymousClass, "isAnonymousClass")
-        if (clz.isArray                                   ) i(clz.isArray, "isArray")
-        if (clz.isEnum                                    ) i(clz.isEnum, "isEnum")
-        if (clz.isInstance(CharSequence::class.java)      ) i(clz.isInstance(CharSequence::class.java), "isInstance")
-        if (clz.isAssignableFrom(CharSequence::class.java)) i(clz.isAssignableFrom(CharSequence::class.java), "isAssignableFrom")
-        if (clz.isInterface                               ) i(clz.isInterface, "isInterface")
-        if (clz.isLocalClass                              ) i(clz.isLocalClass, "isLocalClass")
-        if (clz.isMemberClass                             ) i(clz.isMemberClass, "isMemberClass")
-        if (clz.isPrimitive                               ) i(clz.isPrimitive, "isPrimitive")
-        if (clz.isSynthetic                               ) i(clz.isSynthetic, "isSynthetic")
+        i("getName              " , clz.name)
+        i("getPackage           " , clz.`package`)
+        i("getCanonicalName     " , clz.canonicalName)
+        i("getDeclaredClasses   " , clz.declaredClasses.contentToString())
+        i("getClasses           " , clz.classes.contentToString())
+        i("getSigners           " , clz.signers?.contentToString())
+        i("getEnumConstants     " , clz.enumConstants?.contentToString())
+        i("getTypeParameters    " , clz.typeParameters.contentToString())
+        i("getGenericInterfaces " , clz.genericInterfaces.contentToString())
+        i("getInterfaces        " , clz.interfaces.contentToString())
+        if (clz.isAnnotation                              ) i("isAnnotation         ", clz.isAnnotation      )
+        if (clz.isAnonymousClass                          ) i("isAnonymousClass     ", clz.isAnonymousClass  )
+        if (clz.isArray                                   ) i("isArray              ", clz.isArray           )
+        if (clz.isEnum                                    ) i("isEnum               ", clz.isEnum            )
+        if (clz.isInterface                               ) i("isInterface          ", clz.isInterface       )
+        if (clz.isLocalClass                              ) i("isLocalClass         ", clz.isLocalClass      )
+        if (clz.isMemberClass                             ) i("isMemberClass        ", clz.isMemberClass     )
+        if (clz.isPrimitive                               ) i("isPrimitive          ", clz.isPrimitive       )
+        if (clz.isSynthetic                               ) i("isSynthetic          ", clz.isSynthetic       )
          //@formatter:on
     }
 
     /** dump */
-    fun _MESSAGE(vararg args: Any?): String {
+    private fun _MESSAGE(vararg args: Any?): String {
         if (args.isNullOrEmpty())
             return "null[]"
 
@@ -342,7 +336,7 @@ object Log {
         }
     }
 
-    fun _DUMP(text: String): String = runCatching {
+    private fun _DUMP(text: String): String = runCatching {
         val s = text[0]
         val e = text[text.length - 1]
         when {
@@ -353,75 +347,33 @@ object Log {
         }
     }.getOrDefault(text)
 
-    fun _DUMP(method: Method): String {
-        val result = StringBuilder(Modifier.toString(method.modifiers))
-        if (result.length != 0) {
-            result.append(' ')
-        }
-        result.append(method.returnType.simpleName)
-        result.append("                           ")
-        result.setLength(20)
-        result.append(method.declaringClass.simpleName)
-        result.append('.')
-        result.append(method.name)
-        result.append("(")
-        val parameterTypes = method.parameterTypes
-        for (parameterType in parameterTypes) {
-            result.append(parameterType.simpleName)
-            result.append(',')
-        }
-        if (parameterTypes.size > 0) result.setLength(result.length - 1)
-        result.append(")")
-        val exceptionTypes = method.exceptionTypes
-        if (exceptionTypes.size != 0) {
-            result.append(" throws ")
-            for (exceptionType in exceptionTypes) {
-                result.append(exceptionType.simpleName)
-                result.append(',')
-            }
-            if (exceptionTypes.size > 0) result.setLength(result.length - 1)
-        }
-        return result.toString()
+    private fun _DUMP(method: Method): String = method.run {
+        "$modifiers ${returnType.simpleName.padEnd(20).take(20)}${declaringClass.simpleName}.$name(${parameterTypes.joinToString { it.simpleName }})"
     }
 
     private fun _DUMP(v: View, depth: Int = 0): String {
-        val SP = "                    "
+        val space = "                    "
         val out = StringBuilder(128)
-        out.append(SP)
+        out.append(space)
         when (v) {
             is WebView -> out.insert(depth, "W:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.title)
             is TextView -> out.insert(depth, "T:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.text)
             else -> out.insert(depth, "N:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.javaClass.simpleName)
         }
-        out.setLength(SP.length)
-        appendViewInfo(out, v)
-        return out.toString()
-    }
-
-    private fun appendViewInfo(out: StringBuilder, v: View) { //		out.append('{');
+        out.setLength(space.length)
         val id = v.id
-        if (id != View.NO_ID) { // out.append(String.format(" #%08x", id));
-            val r = v.resources
-            if (id ushr 24 != 0 && r != null) {
-                try {
-                    val pkgname: String
-                    pkgname = when (id and -0x1000000) {
-                        0x7f000000 -> "app"
-                        0x01000000 -> "android"
-                        else -> r.getResourcePackageName(id)
-                    }
-                    val typename = r.getResourceTypeName(id)
-                    val entryname = r.getResourceEntryName(id)
-                    out.append(" ")
-                    out.append(pkgname)
-                    out.append(":")
-                    out.append(typename)
-                    out.append("/")
-                    out.append(entryname)
-                } catch (ignored: NotFoundException) {
-                }
+        val r = v.resources
+        if (id != View.NO_ID && id ushr 24 != 0 && r != null) {
+            val pkgname: String = when (id and -0x1000000) {
+                0x7f000000 -> "app"
+                0x01000000 -> "android"
+                else -> r.getResourcePackageName(id)
             }
+            val typename = r.getResourceTypeName(id)
+            val entryname = r.getResourceEntryName(id)
+            out.append(" $pkgname:$typename/$entryname")
         }
+        return out.toString()
     }
 
     private fun _DUMP(bundle: Bundle?): String {
@@ -457,28 +409,24 @@ object Log {
         return sb.toString()
     }
 
-    fun _DUMP(intent: Intent?): String {
+    private fun _DUMP(intent: Intent?): String {
         if (intent == null) return "null_Intent"
         val sb = StringBuilder()
         //@formatter:off
-        sb.append(if (intent.action       != null)(if (sb.length > 0)"\n" else "") + "Action     " + intent.action               .toString() else "")
-        sb.append(if (intent.data         != null)(if (sb.length > 0)"\n" else "") + "Data       " + intent.data                 .toString() else "")
-        sb.append(if (intent.categories   != null)(if (sb.length > 0)"\n" else "") + "Categories " + intent.categories           .toString() else "")
-        sb.append(if (intent.type         != null)(if (sb.length > 0)"\n" else "") + "Type       " + intent.type                 .toString() else "")
-        sb.append(if (intent.scheme       != null)(if (sb.length > 0)"\n" else "") + "Scheme     " + intent.scheme               .toString() else "")
-        sb.append(if (intent.`package`    != null)(if (sb.length > 0)"\n" else "") + "Package    " + intent.`package`            .toString() else "")
-        sb.append(if (intent.component    != null)(if (sb.length > 0)"\n" else "") + "Component  " + intent.component            .toString() else "")
-        sb.append(if (intent.flags        != 0x00)(if (sb.length > 0)"\n" else "") + "Flags      " + Integer.toHexString(intent.flags) else "")
+        sb.append(if (intent.action       != null)(if (sb.isNotEmpty())"\n" else "") + "Action     " + intent.action               .toString() else "")
+        sb.append(if (intent.data         != null)(if (sb.isNotEmpty())"\n" else "") + "Data       " + intent.data                 .toString() else "")
+        sb.append(if (intent.categories   != null)(if (sb.isNotEmpty())"\n" else "") + "Categories " + intent.categories           .toString() else "")
+        sb.append(if (intent.type         != null)(if (sb.isNotEmpty())"\n" else "") + "Type       " + intent.type                 .toString() else "")
+        sb.append(if (intent.scheme       != null)(if (sb.isNotEmpty())"\n" else "") + "Scheme     " + intent.scheme               .toString() else "")
+        sb.append(if (intent.`package`    != null)(if (sb.isNotEmpty())"\n" else "") + "Package    " + intent.`package`            .toString() else "")
+        sb.append(if (intent.component    != null)(if (sb.isNotEmpty())"\n" else "") + "Component  " + intent.component            .toString() else "")
+        sb.append(if (intent.flags        != 0x00)(if (sb.isNotEmpty())"\n" else "") + "Flags      " + Integer.toHexString(intent.flags) else "")
          //@formatter:on
-        if (intent.extras != null) sb.append((if (sb.length > 0) "\n" else "") + _DUMP(intent.extras))
+        if (intent.extras != null) sb.append((if (sb.isNotEmpty()) "\n" else "") + _DUMP(intent.extras))
         return sb.toString()
     }
 
-    fun _DUMP_StackTrace(tr: Throwable?): String {
-        return android.util.Log.getStackTraceString(tr)
-    }
-
-    fun _DUMP(th: Throwable?): String {
+    private fun _DUMP(th: Throwable?): String {
         th ?: return "Throwable"
         return if (th.cause == null)
             th.javaClass.simpleName + "," + th.message
@@ -486,28 +434,16 @@ object Log {
             _DUMP(th.cause)
     }
 
-    private val sf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS", Locale.getDefault())
-    @JvmOverloads
-    fun _DUMP_milliseconds(milliseconds: Long = System.currentTimeMillis()): String {
-        return "<%s,%20d>".format(sf.format(Date(milliseconds)), SystemClock.elapsedRealtime())
-    }
-
-    private val yyyymmddhhmmss = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
-    fun _DUMP_yyyymmddhhmmss(milliseconds: Long): String {
-        return yyyymmddhhmmss.format(Date(milliseconds))
-    }
-
-    fun _DUMP_elapsed(elapsedRealtime: Long): String {
-        return _DUMP_milliseconds(System.currentTimeMillis() - (SystemClock.elapsedRealtime() - elapsedRealtime))
-    }
-
-    private fun _DUMP(byteArray: ByteArray?): String = _toHexString(byteArray)
+    @JvmStatic
     fun _toHexString(byteArray: ByteArray?): String = byteArray?.joinToString("") { "%02x".format(it) } ?: "!!byte[]"
+
+    @JvmStatic
     fun _toByteArray(hexString: String): ByteArray = hexString.zipWithNext { a, b -> "$a$b" }
             .filterIndexed { index, _ -> index % 2 == 0 }
             .map { it.toInt(16).toByte() }
             .toByteArray()
 
+    @JvmStatic
     fun _DUMP_object(o: Any?): String {
         return _DUMP_object("", o, HashSet())
     }
@@ -531,7 +467,7 @@ object Log {
                     Int::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as IntArray?))
                     Long::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as LongArray?))
                     Short::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as ShortArray?))
-                    else -> sb.append(Arrays.toString(value as Array<*>))
+                    else -> sb.append((value as Array<*>).contentToString())
                 }
              //@formatter:on
             } else if (value.javaClass.isPrimitive //
@@ -576,12 +512,14 @@ object Log {
     //tic
     private var SEED_S: Long = 0L
 
+    @JvmStatic
     fun tic_s() {
         if (!LOG) return
         val e = System.nanoTime()
         SEED_S = e
     }
 
+    @JvmStatic
     fun tic() {
         if (!LOG) return
         val e = System.nanoTime()
@@ -590,6 +528,7 @@ object Log {
         SEED_S = e
     }
 
+    @JvmStatic
     fun tic(vararg args: String) {
         if (!LOG) return
         val e = System.nanoTime()
@@ -601,6 +540,7 @@ object Log {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //image save
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    @JvmStatic
     fun compress(name: String, data: ByteArray) {
         FILE_LOG ?: return
         runCatching {
@@ -608,11 +548,14 @@ object Log {
                 it.mkdirs()
                 it.canWrite()
                 val f = File(it, timeText + "_" + name + ".jpg")
-                FileOutputStream(f).use { BitmapFactory.decodeByteArray(data, 0, data.size).compress(CompressFormat.JPEG, 100, it) }
+                FileOutputStream(f).use { stream ->
+                    BitmapFactory.decodeByteArray(data, 0, data.size).compress(CompressFormat.JPEG, 100, stream)
+                }
             }
         }
     }
 
+    @JvmStatic
     fun compress(name: String, bmp: Bitmap) {
         FILE_LOG ?: return
         runCatching {
@@ -620,14 +563,17 @@ object Log {
                 it.mkdirs()
                 it.canWrite()
                 val f = File(it, timeText + "_" + name + ".jpg")
-                FileOutputStream(f).use { bmp.compress(CompressFormat.JPEG, 100, it) }
+                FileOutputStream(f).use { stream ->
+                    bmp.compress(CompressFormat.JPEG, 100, stream)
+                }
             }
         }
     }
 
-    val timeText: String get() = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.ENGLISH).format(Date())
+    private val timeText: String get() = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.ENGLISH).format(Date())
 
     //flog
+    @JvmStatic
     fun flog(vararg args: Any?) {
         FILE_LOG ?: return
         runCatching {
@@ -649,11 +595,6 @@ object Log {
         }
     }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//life tools
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//상속트리마지막 위치
-
     fun measure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         if (!LOG) return
         val widthMode = MeasureSpec.getMode(widthMeasureSpec)
@@ -665,6 +606,7 @@ object Log {
     }
 
     private var LAST_ACTION_MOVE: Long = 0
+    @JvmStatic
     fun onTouchEvent(event: MotionEvent) {
         if (!LOG) return
         runCatching {
@@ -677,9 +619,6 @@ object Log {
             e(event)
         }
     }
-
-    //호환 팩
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     //xml
     private object PrettyXml {
@@ -694,7 +633,7 @@ object Log {
             return sb.toString()
         }
 
-        private fun lineWrap(s: String?, lineLength: Int, indent: Int, linePrefix: String?): String? {
+        private fun lineWrap(s: String?, lineLength: Int, indent: Int): String? {
             if (s == null) return null
             val sb = StringBuilder()
             var lineStartPos = 0
@@ -707,7 +646,6 @@ object Log {
                     while (lineEndPos > lineStartPos && s[lineEndPos] != ' ' && s[lineEndPos] != '\t') lineEndPos--
                 }
                 sb.append(buildWhitespace(indent))
-                if (linePrefix != null) sb.append(linePrefix)
                 sb.append(s.substring(lineStartPos, lineEndPos + 1))
                 lineStartPos = lineEndPos + 1
             }
@@ -741,13 +679,10 @@ object Log {
                             if (nextStartElementPos > i + 1) {
                                 val textBetweenElements = s.substring(i + 1, nextStartElementPos)
                                 // If the space between elements is solely newlines, let them through to preserve additional newlines in source document.
-                                if (textBetweenElements.replace("\n".toRegex(), "").length == 0) {
-                                    sb.append(textBetweenElements + "\n")
-                                } else if (textBetweenElements.length <= lineLength * 0.5) {
-                                    sb.append(textBetweenElements)
-                                    singleLine = true
-                                } else {
-                                    sb.append("\n" + lineWrap(textBetweenElements, lineLength, indent, null) + "\n")
+                                when {
+                                    textBetweenElements.replace("\n".toRegex(), "").isEmpty() -> sb.append(textBetweenElements + "\n")
+                                    textBetweenElements.length <= lineLength * 0.5 -> sb.append(textBetweenElements).also { singleLine = true }
+                                    else -> sb.append("\n" + lineWrap(textBetweenElements, lineLength, indent) + "\n")
                                 }
                                 i = nextStartElementPos - 1
                             } else {
