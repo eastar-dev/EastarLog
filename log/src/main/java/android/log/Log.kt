@@ -20,6 +20,7 @@ package android.log
 
 import android.content.Context
 import android.content.Intent
+import android.database.Cursor
 import android.graphics.*
 import android.graphics.Bitmap.CompressFormat
 import android.net.Uri
@@ -52,7 +53,7 @@ object Log {
     const val WARN = android.util.Log.WARN
     const val ERROR = android.util.Log.ERROR
     const val ASSERT = android.util.Log.ASSERT
-    var LOG = false
+    var LOG = true
     var FILE_LOG: File? = null
     var OUTPUT_CHANNEL = Channel.STUDIO
 
@@ -507,6 +508,40 @@ object Log {
             e.printStackTrace()
         }
         return sb.toString()
+    }
+
+    fun provider(context: Context, uri: Uri?) {
+        if (!LOG)
+            return
+
+        if (uri == null) {
+            e("context==null || uri == null")
+            return
+        }
+        context.contentResolver.query(uri, null, null, null, null).use {
+            cursor(it)
+        }
+    }
+
+    private fun cursor(c: Cursor?) {
+        c ?: return
+        e("<${c.count}>")
+        e(c.columnNames)
+
+        val dat = arrayOfNulls<String>(c.columnCount)
+        if (!c.isBeforeFirst) {
+            for (i in 0 until c.columnCount)
+                dat[i] = if (c.getType(i) == Cursor.FIELD_TYPE_BLOB) "BLOB" else c.getString(i)
+            e(dat.contentToString())
+        } else {
+            val keep = c.position
+            while (c.moveToNext()) {
+                for (i in 0 until c.columnCount)
+                    dat[i] = if (c.getType(i) == Cursor.FIELD_TYPE_BLOB) "BLOB" else c.getString(i)
+                e(dat.contentToString())
+            }
+            c.moveToPosition(keep)
+        }
     }
 
     //tic
