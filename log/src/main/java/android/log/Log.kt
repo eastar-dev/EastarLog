@@ -219,7 +219,7 @@ object Log {
     }
 
     @JvmStatic
-    fun printStackTrace(e: Exception) {
+    fun printStackTrace(e: Throwable) {
         if (!LOG) return
         e.printStackTrace()
     }
